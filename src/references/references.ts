@@ -17,7 +17,7 @@ import { DatabaseService, tableNames } from '#root/database/database.ts';
 import { EmbedderService } from '#root/embedder/embedder.ts';
 
 // Chunking configuration
-const CHUNK_SIZE = 1000;
+const CHUNK_SIZE = 1500;
 const CHUNK_OVERLAP = 200;
 
 // Search configuration
