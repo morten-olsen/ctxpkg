@@ -12,13 +12,13 @@ cd ai-assist
 # Install dependencies
 pnpm install
 
-# Build the project
-pnpm run build
+# Make `mortens-ai-assist` globally accessible
+npm link
 ```
 
 ## Configuration
 
-Before using the tool, configure your OpenAI-compatible API credentials:
+Before using the tool, configure your OpenAI-compatible API credentials. if you want to use the build in agent. (Not required for document reference capabilities)
 
 ```bash
 # Set your API key
@@ -31,7 +31,7 @@ mortens-ai-assist config set openai.baseUrl https://api.your-provider.com/v1
 mortens-ai-assist config set openai.model gpt-4o-mini
 ```
 
-Configuration is stored in your system's config directory and persists across sessions.
+Configuration is stored in your system's config directory and persists across sessions (use `mortens-ai-assist config path` to see the system specific path).
 
 ## CLI Usage
 
@@ -145,18 +145,18 @@ To use the MCP server with an AI tool or editor, add it to your MCP client confi
 
 ### Command Aliases
 
-| Full Command | Alias |
-|--------------|-------|
-| `chat session` | `session`, `s` |
-| `chat ask` | `ask`, `a` |
-| `config` | `cfg` |
-| `config list` | `config ls` |
-| `references` | `ref` |
-| `references list-collections` | `ref ls` |
-| `references drop-collection` | `ref drop` |
-| `references update-collection` | `ref update` |
-| `references interactive-search` | `ref isearch` |
-| `mcp references` | `mcp ref` |
+| Full Command                    | Alias          |
+| ------------------------------- | -------------- |
+| `chat session`                  | `session`, `s` |
+| `chat ask`                      | `ask`, `a`     |
+| `config`                        | `cfg`          |
+| `config list`                   | `config ls`    |
+| `references`                    | `ref`          |
+| `references list-collections`   | `ref ls`       |
+| `references drop-collection`    | `ref drop`     |
+| `references update-collection`  | `ref update`   |
+| `references interactive-search` | `ref isearch`  |
+| `mcp references`                | `mcp ref`      |
 
 ## Features
 
@@ -178,16 +178,6 @@ Store and search documentation using semantic embeddings:
 - Vector similarity search powered by SQLite with `sqlite-vec`
 - Organize documents into named collections
 - Update collections from glob patterns
-
-## Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `OPENAI_API_KEY` | API key for OpenAI-compatible provider | - |
-| `OPENAI_BASE_URL` | Base URL for the API | `https://api.openai.com/v1` |
-| `OPENAI_MODEL` | Model to use | `gpt-4o` |
-
-Environment variables take precedence over config file values.
 
 ## Development
 
