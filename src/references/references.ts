@@ -2,7 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { glob, readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
-import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
+import { TokenTextSplitter } from '@langchain/textsplitters';
 import { type FeatureExtractionPipeline, pipeline, cos_sim } from '@huggingface/transformers';
 
 import {
@@ -17,8 +17,8 @@ import { DatabaseService, tableNames } from '#root/database/database.ts';
 import { EmbedderService } from '#root/embedder/embedder.ts';
 
 // Chunking configuration
-const CHUNK_SIZE = 1500;
-const CHUNK_OVERLAP = 200;
+const CHUNK_SIZE = 400;
+const CHUNK_OVERLAP = 80;
 
 // Search configuration
 const RRF_K = 60; // Reciprocal Rank Fusion constant
@@ -144,7 +144,8 @@ class ReferencesService {
       }
 
       // Create chunks with improved settings
-      const splitter = RecursiveCharacterTextSplitter.fromLanguage('markdown', {
+      const splitter = new TokenTextSplitter({
+        encodingName: 'cl100k_base',
         chunkSize: CHUNK_SIZE,
         chunkOverlap: CHUNK_OVERLAP,
       });
