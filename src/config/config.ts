@@ -72,6 +72,14 @@ const config = convict({
       default: 0,
     },
   },
+  references: {
+    defaultCollections: {
+      doc: 'Default collections to search in (optional)',
+      format: Array,
+      default: [] as string[],
+      env: 'AI_ASSIST_DEFAULT_COLLECTIONS',
+    },
+  },
 });
 
 // Ensure config directory exists for future writes, but don't fail if we can't read yet

@@ -1,6 +1,8 @@
 import type { Command } from 'commander';
 import { select, confirm, input } from '@inquirer/prompts';
 
+import { config } from '../config/config.ts';
+
 import {
   formatHeader,
   formatSuccess,
@@ -162,20 +164,42 @@ const createReferenceCli = (command: Command) => {
     .argument('<query>', 'Search query')
     .option('-c, --collections <names...>', 'Limit search to specific collections')
     .option('-l, --limit <number>', 'Maximum number of results', '10')
+    .option('--no-default', 'Do not include default collections in search')
     .action(
-      withErrorHandling(async (query: string, options: { collections?: string[]; limit: string }) => {
+      withErrorHandling(async (query: string, options: { collections?: string[]; limit: string; default: boolean }) => {
         const client = await createCliClient();
         try {
+          // Merge specified collections with default collections and cwd (unless --no-default is set)
+          const defaultCollections = config.get('references.defaultCollections') as string[];
+          let collectionsToSearch: string[] | undefined;
+
+          if (options.collections || options.default) {
+            const collectionsSet = new Set<string>();
+            if (options.default) {
+              // Always include cwd as a default collection
+              collectionsSet.add(process.cwd());
+              for (const c of defaultCollections) {
+                collectionsSet.add(c);
+              }
+            }
+            if (options.collections) {
+              for (const c of options.collections) {
+                collectionsSet.add(c);
+              }
+            }
+            collectionsToSearch = collectionsSet.size > 0 ? [...collectionsSet] : undefined;
+          }
+
           formatHeader('Search Results');
           formatInfo(`Query: ${chalk.cyan(query)}`);
-          if (options.collections) {
-            formatInfo(`Collections: ${chalk.cyan(options.collections.join(', '))}`);
+          if (collectionsToSearch) {
+            formatInfo(`Collections: ${chalk.cyan(collectionsToSearch.join(', '))}`);
           }
           console.log();
 
           const results = await client.references.search({
             query,
-            collections: options.collections,
+            collections: collectionsToSearch,
             limit: parseInt(options.limit, 10),
           });
 
