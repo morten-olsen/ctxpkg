@@ -11,18 +11,36 @@ This document provides guidelines for AI agents working on this codebase.
 - Semantic search over indexed documents
 - MCP server integration for AI tools and editors
 
+## Module Documentation
+
+Each module has its own `AGENTS.md` with detailed architecture and patterns:
+
+| Module | Path | Purpose |
+|--------|------|---------|
+| Backend | `src/backend/AGENTS.md` | JSON-RPC API, request routing, procedures |
+| Client | `src/client/AGENTS.md` | Backend client, connection adapters |
+| CLI | `src/cli/AGENTS.md` | Command-line interface, formatting |
+| Collections | `src/collections/AGENTS.md` | Package management, sync, manifests |
+| Daemon | `src/daemon/AGENTS.md` | Background process, Unix socket server |
+| Database | `src/database/AGENTS.md` | SQLite, migrations, vector search |
+| MCP | `src/mcp/AGENTS.md` | MCP server integration for editors |
+| References | `src/references/AGENTS.md` | Document storage, chunking, embeddings |
+| Tools | `src/tools/AGENTS.md` | AI agent tools, MCP/LangChain adapters |
+
+**When working on a module, read its `AGENTS.md` first.**
+
 ## Documentation Maintenance
 
-> **IMPORTANT**: When making changes to the codebase, always check if documentation needs to be updated. If you discover discrepancies between the code and documentation, fix them.
+> **IMPORTANT**: When making changes to the codebase, always check if documentation needs to be updated.
 
 ### Documentation Files
 
 | File | Purpose | Update When |
 |------|---------|-------------|
-| `README.md` | CLI usage, installation, quick start | Adding/changing CLI commands, config options, features |
-| `ARCHITECTURE.md` | Technical design, components, data flow | Adding services, changing structure, modifying data flows |
-| `AGENTS.md` | AI agent guidelines (this file) | Discovering new patterns, conventions, or gotchas |
-| `specs/collection-packages.md` | Collection packages specification | Changing collection/manifest formats |
+| `README.md` | CLI usage, installation, quick start | Adding/changing CLI commands, config options |
+| `ARCHITECTURE.md` | Technical design, components, data flow | Adding services, changing structure |
+| `AGENTS.md` | AI agent guidelines (this file) | Discovering new patterns, conventions |
+| `src/*/AGENTS.md` | Module-specific guidelines | Changing module architecture |
 
 ### Documentation Checklist
 
@@ -30,9 +48,8 @@ When completing a task, verify:
 
 - [ ] New CLI commands are documented in README.md
 - [ ] New services/components are documented in ARCHITECTURE.md
-- [ ] Changed APIs have updated documentation
+- [ ] Module changes reflected in relevant `AGENTS.md`
 - [ ] Removed features are removed from docs
-- [ ] Examples in docs still work
 
 ## Project Conventions
 
@@ -43,36 +60,8 @@ src/
 ├── <domain>/
 │   ├── <domain>.ts          # Main implementation
 │   ├── <domain>.schemas.ts  # Zod schemas and types
+│   ├── AGENTS.md            # Module documentation
 │   └── <domain>.*.ts        # Additional files
-```
-
-### CLI Structure
-
-CLI commands are split by domain in `src/cli/`:
-
-- `cli.ts` - Main entry point, mounts subcommand groups
-- `cli.utils.ts` - Shared formatting utilities (always use these)
-- `cli.<domain>.ts` - Domain-specific commands
-
-**Pattern for new CLI modules:**
-
-```typescript
-import type { Command } from 'commander';
-import { formatHeader, formatSuccess, withErrorHandling, chalk } from './cli.utils.ts';
-
-const create<Domain>Cli = (command: Command) => {
-  command.description('Description of command group');
-
-  command
-    .command('subcommand')
-    .alias('sc')
-    .description('What this does')
-    .action(withErrorHandling(async () => {
-      // Implementation
-    }));
-};
-
-export { create<Domain>Cli };
 ```
 
 ### Service Pattern
@@ -90,10 +79,7 @@ class MyService {
     this.#services = services;
   }
 
-  // Optional cleanup
-  [destroy] = async () => {
-    // cleanup resources
-  };
+  [destroy] = async () => { /* cleanup */ };
 }
 ```
 
@@ -106,79 +92,22 @@ Imports should be grouped (enforced by eslint):
 3. Local utilities (`./`)
 4. Internal modules (`#root/`)
 
-With blank lines between groups.
-
-### Error Handling in CLI
-
-Always wrap CLI actions with `withErrorHandling()`:
-
-```typescript
-.action(withErrorHandling(async (args, options) => {
-  // errors are caught and formatted
-}))
-```
-
-### Formatting Output
-
-Use utilities from `cli.utils.ts`:
-
-```typescript
-formatHeader('Section Title');      // Cyan bordered header
-formatSuccess('Operation done');    // Green ✔ prefix
-formatError('Something failed');    // Red ✖ prefix
-formatInfo('Note to user');         // Blue ℹ prefix
-formatWarning('Be careful');        // Yellow ⚠ prefix
-
-formatTableHeader([{ name: 'Col', width: 10 }]);
-formatTableRow([{ value: 'data', width: 10, color: chalk.cyan }]);
-```
-
 ### Type Safety
 
 - Use Zod schemas for runtime validation
 - Export types derived from schemas: `type Foo = z.infer<typeof fooSchema>`
-- Use `// eslint-disable-next-line @typescript-eslint/no-explicit-any` only when necessary (e.g., convict config access)
+- Use `// eslint-disable-next-line @typescript-eslint/no-explicit-any` only when necessary
 
 ## Common Tasks
 
-### Adding a New CLI Command
-
-1. Identify which `cli.<domain>.ts` file it belongs to (or create new)
-2. Add command with `.command()`, `.alias()`, `.description()`, `.action()`
-3. Use `withErrorHandling()` wrapper
-4. Update README.md with new command documentation
-5. Update ARCHITECTURE.md if adding new domain
-
-### Adding a New Service
-
-1. Create `src/<domain>/<domain>.ts`
-2. Implement class with `Services` constructor parameter
-3. Add `[destroy]` method if cleanup needed
-4. Document in ARCHITECTURE.md
-
-### Adding MCP Tools
-
-1. Create tool file in `src/tools/<category>/`
-2. Use `defineTool()` from `tools/tools.types.ts` with Zod schema
-3. Export tool definitions
-4. Register on MCP server with `registerMcpTools()`
-5. Add CLI command in `src/cli/cli.mcp.ts`
-6. Document in ARCHITECTURE.md
-
-### Adding Collection Source Types
-
-1. Add new source schema to `src/collections/collections.schemas.ts`
-2. Implement resolution logic in `CollectionsService`
-3. Update CLI commands as needed
-4. Update `specs/collection-packages.md`
-5. Document in README.md
-
-### Modifying Database Schema
-
-1. Create new migration in `src/database/migrations/`
-2. Follow naming: `migrations.NNN-description.ts`
-3. Export and register in `migrations.ts`
-4. Update ARCHITECTURE.md if adding tables
+| Task | See Module |
+|------|------------|
+| Add CLI command | `src/cli/AGENTS.md` |
+| Add backend procedure | `src/backend/AGENTS.md` |
+| Add MCP tool | `src/tools/AGENTS.md`, `src/mcp/AGENTS.md` |
+| Add collection source type | `src/collections/AGENTS.md` |
+| Add database migration | `src/database/AGENTS.md` |
+| Add client adapter | `src/client/AGENTS.md` |
 
 ## Testing Changes
 
