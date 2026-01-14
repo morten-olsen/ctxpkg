@@ -62,6 +62,14 @@ type ProcedureInput<T> = T extends Procedure<infer TInput, unknown> ? z.infer<TI
 // Extract output type from a procedure
 type ProcedureOutput<T> = T extends Procedure<z.ZodTypeAny, infer TOutput> ? TOutput : never;
 
+// Convert a procedure to its function signature
+// When input is an empty object, the parameter becomes optional
+type ProcedureToFunction<T> = T extends Procedure<infer TInput, infer TOutput>
+  ? keyof z.infer<TInput> extends never
+    ? (params?: z.infer<TInput>) => Promise<TOutput>
+    : (params: z.infer<TInput>) => Promise<TOutput>
+  : never;
+
 // Create response helpers
 const createSuccessResponse = (id: string, result: unknown): Response => ({
   id,
@@ -73,5 +81,5 @@ const createErrorResponse = (id: string, code: ErrorCode, message: string, data?
   error: { code, message, data },
 });
 
-export type { Request, Response, Procedure, ServiceDefinition, ProcedureInput, ProcedureOutput, ErrorCode };
+export type { Request, Response, Procedure, ServiceDefinition, ProcedureInput, ProcedureOutput, ProcedureToFunction, ErrorCode };
 export { requestSchema, responseSchema, ErrorCodes, procedure, createSuccessResponse, createErrorResponse };

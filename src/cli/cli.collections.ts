@@ -14,11 +14,15 @@ import {
   withErrorHandling,
   chalk,
 } from './cli.utils.ts';
+import { createCliClient } from './cli.client.ts';
 
 import { Services } from '#root/utils/utils.services.ts';
-import { CollectionsService, type SyncResult } from '#root/collections/collections.ts';
+import { CollectionsService } from '#root/collections/collections.ts';
 import { isFileSpec, type FileSpec, type PkgSpec, type Manifest } from '#root/collections/collections.schemas.ts';
 import { config } from '#root/config/config.ts';
+import type { GetBackendAPIResponse } from '#root/backend/backend.types.ts';
+
+type SyncResult = GetBackendAPIResponse<'collections', 'sync'>;
 
 const createCollectionsCli = (command: Command) => {
   command.description('Manage collection packages for AI context');
@@ -139,6 +143,7 @@ const createCollectionsCli = (command: Command) => {
     .action(
       withErrorHandling(async (name: string, options: { drop?: boolean }) => {
         const services = new Services();
+        const client = options.drop ? await createCliClient() : null;
         try {
           const collectionsService = services.get(CollectionsService);
 
@@ -155,18 +160,19 @@ const createCollectionsCli = (command: Command) => {
             return;
           }
 
-          if (options.drop) {
+          if (options.drop && client) {
             const collectionId = collectionsService.computeCollectionId(spec);
-            const { ReferencesService } = await import('#root/references/references.ts');
-            const referencesService = services.get(ReferencesService);
-            await referencesService.dropCollection(collectionId);
-            await collectionsService.deleteCollection(collectionId);
+            await client.references.dropCollection({ collection: collectionId });
+            await client.collections.delete({ id: collectionId });
             formatInfo(`Dropped indexed data for "${name}"`);
           }
 
           collectionsService.removeFromProjectConfig(name);
           formatSuccess(`Removed "${name}" from project config`);
         } finally {
+          if (client) {
+            await client.disconnect();
+          }
           await services.destroy();
         }
       }),
@@ -180,6 +186,7 @@ const createCollectionsCli = (command: Command) => {
     .action(
       withErrorHandling(async () => {
         const services = new Services();
+        const client = await createCliClient();
         try {
           const collectionsService = services.get(CollectionsService);
 
@@ -215,7 +222,7 @@ const createCollectionsCli = (command: Command) => {
           ]);
 
           for (const [name, spec] of entries) {
-            const status = await collectionsService.getSyncStatus(spec);
+            const status = await client.collections.getSyncStatus({ spec, cwd: process.cwd() });
             const statusText = status === 'synced' ? chalk.green('✓ synced') : chalk.yellow('⚠ not synced');
 
             let source: string;
@@ -240,6 +247,7 @@ const createCollectionsCli = (command: Command) => {
 
           console.log();
         } finally {
+          await client.disconnect();
           await services.destroy();
         }
       }),
@@ -272,11 +280,6 @@ const createCollectionsCli = (command: Command) => {
             return;
           }
 
-          if (options.dryRun) {
-            formatWarning('Dry run mode - no changes will be made');
-            console.log();
-          }
-
           const toSync = name
             ? [[name, projectConfig.collections[name]] as const]
             : Object.entries(projectConfig.collections);
@@ -286,24 +289,40 @@ const createCollectionsCli = (command: Command) => {
             return;
           }
 
-          for (const [collectionName, spec] of toSync) {
-            const typeLabel = isFileSpec(spec) ? 'file' : 'pkg';
-            console.log(chalk.bold(`Syncing ${collectionName} (${typeLabel})...`));
+          // Handle dry-run mode separately
+          if (options.dryRun) {
+            formatWarning('Dry run mode - no changes will be made');
+            console.log();
 
-            if (options.dryRun) {
+            for (const [collectionName, spec] of toSync) {
+              const typeLabel = isFileSpec(spec) ? 'file' : 'pkg';
+              console.log(chalk.bold(`Syncing ${collectionName} (${typeLabel})...`));
               formatInfo('  Would sync this collection');
               console.log();
-              continue;
             }
 
-            const result = await collectionsService.syncCollection(collectionName, spec, process.cwd(), {
-              force: options.force,
-              onProgress: (message) => {
-                console.log(chalk.dim(`  ${message}`));
-              },
-            });
+            console.log(chalk.green.bold('All collections synced.'));
+            return;
+          }
 
-            printSyncResult(collectionName, result);
+          // Actually sync collections
+          const client = await createCliClient();
+          try {
+            for (const [collectionName, spec] of toSync) {
+              const typeLabel = isFileSpec(spec) ? 'file' : 'pkg';
+              console.log(chalk.bold(`Syncing ${collectionName} (${typeLabel})...`));
+
+              const result = await client.collections.sync({
+                name: collectionName,
+                spec,
+                cwd: process.cwd(),
+                force: options.force,
+              });
+
+              printSyncResult(collectionName, result);
+            }
+          } finally {
+            await client.disconnect();
           }
 
           console.log(chalk.green.bold('All collections synced.'));

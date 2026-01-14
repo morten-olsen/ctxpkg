@@ -1,24 +1,5 @@
 // Re-export backend API types for client use
-export type {
-  BackendAPI,
-  ReferencesAPI,
-  CollectionsAPI,
-  SystemAPI,
-  CollectionInfo,
-  UpdateCollectionOptions,
-  DropCollectionParams,
-  GetDocumentParams,
-  SystemStatus,
-  PingResponse,
-  ReferenceDocument,
-  SearchChunkItem,
-  SearchChunksOptions,
-  SyncCollectionParams,
-  SyncResult,
-  CollectionRecordInfo,
-  GetSyncStatusParams,
-  CollectionSpec,
-} from '#root/backend/backend.types.ts';
+export type { BackendAPI, GetBackendAPIResponse, GetBackendAPIParams } from '#root/backend/backend.types.ts';
 
 // Connection modes
 export type ConnectionMode = 'direct' | 'daemon' | 'websocket';

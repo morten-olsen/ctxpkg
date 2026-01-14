@@ -77,6 +77,11 @@ const createBackendServices = (services: Services, getStatus: () => { uptime: nu
         return colService.getSyncStatus(params.spec, params.cwd);
       },
     ),
+
+    delete: procedure(z.object({ id: z.string() }), async (params): Promise<void> => {
+      const colService = services.get(CollectionsService);
+      await colService.deleteCollection(params.id);
+    }),
   };
 
   // System procedures

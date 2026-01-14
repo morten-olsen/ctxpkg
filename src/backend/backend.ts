@@ -92,20 +92,15 @@ class Backend {
 
   #getProcedure(serviceName: string, methodName: string): Procedure<z.ZodTypeAny, unknown> | null {
     const services = this.#backendServices;
-
-    if (serviceName === 'references') {
-      const service = services.references;
-      if (methodName in service) {
-        return service[methodName as keyof typeof service] as unknown as Procedure<z.ZodTypeAny, unknown>;
-      }
-    } else if (serviceName === 'system') {
-      const service = services.system;
-      if (methodName in service) {
-        return service[methodName as keyof typeof service] as unknown as Procedure<z.ZodTypeAny, unknown>;
-      }
+    if (!(serviceName in services)) {
+      return null;
+    }
+    const service = services[serviceName as keyof typeof services];
+    if (!(methodName in service)) {
+      return null;
     }
 
-    return null;
+    return service[methodName as keyof typeof service] as unknown as Procedure<z.ZodTypeAny, unknown>;
   }
 
   [destroy] = async () => {

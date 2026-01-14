@@ -1,8 +1,8 @@
-import type { ClientOptions, BackendAPI, ReferencesAPI, CollectionsAPI, SystemAPI } from './client.types.ts';
+import type { ClientOptions, BackendAPI } from './client.types.ts';
 import { DirectAdapter, DaemonAdapter, WebSocketAdapter, type ClientAdapter } from './client.adapters.ts';
 
 // Create a proxy that converts method calls to RPC requests
-const createServiceProxy = <T>(adapter: ClientAdapter, serviceName: string): T => {
+const createServiceProxy = <T extends keyof BackendAPI>(adapter: ClientAdapter, serviceName: T): BackendAPI[T] => {
   const target = {} as Record<string, unknown>;
   return new Proxy(target, {
     get(_target, methodName: string) {
@@ -11,7 +11,7 @@ const createServiceProxy = <T>(adapter: ClientAdapter, serviceName: string): T =
         return adapter.request(method, params ?? {});
       };
     },
-  }) as T;
+  }) as BackendAPI[T];
 };
 
 class BackendClient implements BackendAPI {
@@ -19,9 +19,9 @@ class BackendClient implements BackendAPI {
   #connected = false;
 
   // Type-safe service proxies
-  readonly references: ReferencesAPI;
-  readonly collections: CollectionsAPI;
-  readonly system: SystemAPI;
+  readonly references: BackendAPI['references'];
+  readonly collections: BackendAPI['collections'];
+  readonly system: BackendAPI['system'];
 
   constructor(options: ClientOptions) {
     // Create appropriate adapter
@@ -49,9 +49,9 @@ class BackendClient implements BackendAPI {
     }
 
     // Create type-safe service proxies
-    this.references = createServiceProxy<ReferencesAPI>(this.#adapter, 'references');
-    this.collections = createServiceProxy<CollectionsAPI>(this.#adapter, 'collections');
-    this.system = createServiceProxy<SystemAPI>(this.#adapter, 'system');
+    this.references = createServiceProxy(this.#adapter, 'references');
+    this.collections = createServiceProxy(this.#adapter, 'collections');
+    this.system = createServiceProxy(this.#adapter, 'system');
   }
 
   async connect(): Promise<void> {
