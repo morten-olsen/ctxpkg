@@ -36,7 +36,7 @@ const config = convict({
     idleTimeout: {
       doc: 'Idle timeout in milliseconds before daemon shuts down (0 to disable)',
       format: 'nat',
-      default: 5 * 60 * 1000, // 5 minutes
+      default: 0,
       env: 'CTXPKG_IDLE_TIMEOUT',
     },
     autoStart: {
