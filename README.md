@@ -1,197 +1,253 @@
-# mortens-ai-assist
+# ctxpkg
 
-An AI-powered assistant for software development with reference document management and semantic search capabilities.
+A package manager for AI agent context — manage, sync, and distribute reference documentation collections for AI-assisted development workflows.
+
+## Overview
+
+`ctxpkg` helps you manage contextual documentation that AI agents can use to understand your codebase, frameworks, and organizational standards. Think of it as "npm for AI context":
+
+- **Local collections**: Index local documentation with glob patterns
+- **Package collections**: Install from remote manifests or bundles
+- **Versioning**: Pin to specific versions via URL
+- **Sharing**: Create distributable packages for your team or the community
+- **Semantic search**: Query indexed documents with natural language
 
 ## Installation
 
 ```bash
 # Clone the repository
 git clone <repository-url>
-cd ai-assist
+cd ctxpkg
 
 # Install dependencies
 pnpm install
 
-# Make `mortens-ai-assist` globally accessible
+# Build
+pnpm run build
+
+# Make globally accessible
 npm link
 ```
 
-## Configuration
-
-Before using the tool, configure your OpenAI-compatible API credentials. if you want to use the build in agent. (Not required for document reference capabilities)
+## Quick Start
 
 ```bash
-# Set your API key
-mortens-ai-assist config set openai.apiKey sk-your-key-here
+# Initialize a project config
+ctxpkg col init
 
-# Optional: Use a different provider (default: https://api.openai.com/v1)
-mortens-ai-assist config set openai.baseUrl https://api.your-provider.com/v1
+# Add local documentation
+ctxpkg col add project-docs ./docs
 
-# Optional: Change the model (default: gpt-4o)
-mortens-ai-assist config set openai.model gpt-4o-mini
+# Add a remote package
+ctxpkg col add react https://example.com/react-docs/v18/manifest.json
+
+# Sync all collections (index documents)
+ctxpkg col sync
+
+# Search your indexed documentation
+ctxpkg ref search "how to handle authentication"
 ```
-
-Configuration is stored in your system's config directory and persists across sessions (use `mortens-ai-assist config path` to see the system specific path).
 
 ## CLI Usage
 
-```
-mortens-ai-assist <command> [options]
-```
+### Collection Commands
 
-### Chat Commands
-
-Interactive AI assistant with access to file and git tools.
+Manage context collections as packages.
 
 ```bash
-# Start an interactive chat session
-mortens-ai-assist chat session
-mortens-ai-assist chat s
-mortens-ai-assist session      # shortcut
+# Initialize project config (creates context.json)
+ctxpkg collections init
+ctxpkg col init
 
-# Send a single prompt
-mortens-ai-assist chat ask "What files are in the src directory?"
-mortens-ai-assist chat a "Summarize the recent commits"
-mortens-ai-assist ask "..."    # shortcut
+# Add collections
+ctxpkg col add project-docs ./docs                    # Local files
+ctxpkg col add react https://example.com/manifest.json  # Remote package
+ctxpkg col add lib file://../shared/manifest.json     # Local package
+
+# Add with explicit options
+ctxpkg col add my-docs --type file --path ./docs --glob "**/*.md"
+ctxpkg col add lib --type pkg --url https://example.com/bundle.tar.gz
+
+# List configured collections and sync status
+ctxpkg col list
+ctxpkg col ls
+
+# Sync collections (index documents)
+ctxpkg col sync           # Sync all
+ctxpkg col sync react     # Sync specific collection
+ctxpkg col sync --force   # Re-index everything
+
+# Remove a collection
+ctxpkg col remove react
+ctxpkg col remove react --drop  # Also delete indexed data
 ```
 
-### Configuration Commands
+### Reference Commands
 
-Manage application settings.
-
-```bash
-# List all configuration values
-mortens-ai-assist config list
-mortens-ai-assist config ls
-mortens-ai-assist config ls --all    # include sensitive values
-
-# Get a specific value
-mortens-ai-assist config get openai.model
-
-# Set a value
-mortens-ai-assist config set openai.temperature 0.7
-
-# Interactive editor
-mortens-ai-assist config edit
-mortens-ai-assist config edit openai.model
-
-# Reset to default
-mortens-ai-assist config reset openai.temperature
-
-# Show config file location
-mortens-ai-assist config path
-```
-
-### Reference Document Commands
-
-Manage collections of reference documents with semantic search.
+Query indexed reference documents.
 
 ```bash
-# List all collections
-mortens-ai-assist ref ls
-mortens-ai-assist references list-collections
-
-# Add/update documents from files
-mortens-ai-assist ref update -p "**/*.md" -c my-docs
-mortens-ai-assist ref update --pattern "docs/**/*.md" --cwd ./project --collection project-docs
+# List indexed collections
+ctxpkg ref ls
 
 # Search documents
-mortens-ai-assist ref search "how to configure authentication"
-mortens-ai-assist ref search "error handling" -c my-docs -l 5
-mortens-ai-assist ref search "query" --collections docs guides --limit 20
+ctxpkg ref search "authentication flow"
+ctxpkg ref search "error handling" -c project-docs -l 5
+ctxpkg ref search "hooks" --collections react lodash --limit 20
 
 # Interactive search
-mortens-ai-assist ref isearch
+ctxpkg ref isearch
 
-# Drop a collection
-mortens-ai-assist ref drop              # interactive selection
-mortens-ai-assist ref drop my-docs      # specific collection
-mortens-ai-assist ref drop my-docs -f   # skip confirmation
+# Drop a collection from index
+ctxpkg ref drop my-docs
+ctxpkg ref drop my-docs -f   # Skip confirmation
 ```
 
-### MCP Server Commands
+### Publishing Packages
 
-Start MCP (Model Context Protocol) servers for integration with AI tools and editors.
+Create distributable documentation packages.
 
 ```bash
-# Start an MCP server with reference document tools
-mortens-ai-assist mcp references
-mortens-ai-assist mcp ref
+# Create a manifest for your documentation
+ctxpkg col manifest init
 
-# Limit to specific collections
-mortens-ai-assist mcp ref -c my-docs project-docs
-
-# Disable default collections (cwd + configured defaults)
-mortens-ai-assist mcp ref --no-default -c my-docs
-
-# Custom server name and version
-mortens-ai-assist mcp ref --name my-assistant --version 2.0.0
+# Edit manifest.json to configure sources
+# Then create a bundle
+ctxpkg col pack
+ctxpkg col pack --output my-docs-1.0.0.tar.gz
 ```
 
-**MCP Configuration:**
+### MCP Server
 
-To use the MCP server with an AI tool or editor, add it to your MCP client configuration:
+Expose reference tools via Model Context Protocol for AI editor integration.
+
+```bash
+# Start MCP server with reference tools
+ctxpkg mcp references
+ctxpkg mcp ref
+
+# Limit to specific collections
+ctxpkg mcp ref -c project-docs react
+```
+
+**MCP Client Configuration:**
 
 ```json
 {
   "mcpServers": {
-    "ai-assist-references": {
-      "command": "mortens-ai-assist",
+    "ctxpkg-references": {
+      "command": "ctxpkg",
       "args": ["mcp", "references"]
     }
   }
 }
 ```
 
-### Command Aliases
+### Configuration Commands
 
-| Full Command                    | Alias          |
-| ------------------------------- | -------------- |
-| `chat session`                  | `session`, `s` |
-| `chat ask`                      | `ask`, `a`     |
-| `config`                        | `cfg`          |
-| `config list`                   | `config ls`    |
-| `references`                    | `ref`          |
-| `references list-collections`   | `ref ls`       |
-| `references drop-collection`    | `ref drop`     |
-| `references update-collection`  | `ref update`   |
-| `references interactive-search` | `ref isearch`  |
-| `mcp references`                | `mcp ref`      |
+```bash
+ctxpkg config list          # List all settings
+ctxpkg config get <key>     # Get a value
+ctxpkg config set <key> <value>  # Set a value
+ctxpkg config path          # Show config file location
+```
 
-## Features
+### Daemon Commands
 
-### AI Chat Assistant
+The daemon provides persistent backend services for better performance.
 
-The chat assistant uses LangChain with OpenAI-compatible models and has access to:
+```bash
+ctxpkg daemon start    # Start background daemon
+ctxpkg daemon stop     # Stop daemon
+ctxpkg daemon status   # Show daemon status
+ctxpkg daemon restart  # Restart daemon
+```
 
-- **File tools**: Read files, glob patterns, search file contents, get file stats
-- **Git tools**: Repository status, diffs, commit history
-- **Reference tools**: List collections, semantic search across indexed documents
+## Project Configuration
 
-The assistant can search your indexed reference documentation during conversations to provide context-aware answers.
+Projects use a `context.json` file to declare their collections:
 
-### Reference Documents
+```json
+{
+  "collections": {
+    "project-docs": {
+      "type": "file",
+      "path": "./docs",
+      "glob": "**/*.md"
+    },
+    "react": {
+      "type": "pkg",
+      "url": "https://example.com/react-docs/v18/manifest.json"
+    },
+    "org-standards": {
+      "type": "pkg",
+      "url": "file://../shared/standards/manifest.json"
+    }
+  }
+}
+```
 
-Store and search documentation using semantic embeddings:
+## Package Manifest Format
 
-- Documents are chunked and embedded using the `mxbai-embed-large-v1` model
-- Vector similarity search powered by SQLite with `sqlite-vec`
-- Organize documents into named collections
-- Update collections from glob patterns
+Published packages use a `manifest.json`:
+
+```json
+{
+  "name": "my-framework-docs",
+  "version": "2.0.0",
+  "description": "Documentation for My Framework",
+  "sources": {
+    "glob": ["**/*.md"]
+  }
+}
+```
+
+Or with explicit file list and hashes:
+
+```json
+{
+  "name": "my-framework-docs",
+  "version": "2.0.0",
+  "baseUrl": "https://cdn.example.com/docs/",
+  "sources": {
+    "files": [
+      "getting-started.md",
+      { "path": "api/core.md", "hash": "sha256:9f86d081..." },
+      { "url": "https://other-cdn.com/shared/contributing.md" }
+    ]
+  }
+}
+```
+
+## Command Aliases
+
+| Full Command | Alias |
+|--------------|-------|
+| `collections` | `col` |
+| `collections list` | `col ls` |
+| `references` | `ref` |
+| `references list-collections` | `ref ls` |
+| `references drop-collection` | `ref drop` |
+| `references interactive-search` | `ref isearch` |
+| `config` | `cfg` |
+| `mcp references` | `mcp ref` |
+
+## How It Works
+
+1. **Collections** are declared in your project's `context.json`
+2. **Sync** fetches and indexes documents into a local SQLite database
+3. Documents are **chunked** and **embedded** using local ML models
+4. **Search** uses vector similarity to find relevant content
+5. **MCP integration** exposes search to AI agents and editors
 
 ## Development
 
 ```bash
-# Run linting
-pnpm run test:lint
-
-# Run tests
-pnpm run test:unit
-
-# Build
-pnpm run build
+pnpm run test:lint   # Run linting
+pnpm run test:unit   # Run tests
+pnpm run build       # Build TypeScript
 ```
 
 ## License
 
-This project is licensed under the [GNU Affero General Public License v3.0 (AGPL-3.0)](LICENSE).
+[GNU Affero General Public License v3.0 (AGPL-3.0)](LICENSE)

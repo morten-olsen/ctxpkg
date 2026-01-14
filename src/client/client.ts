@@ -1,4 +1,4 @@
-import type { ClientOptions, BackendAPI, ReferencesAPI, SystemAPI } from './client.types.ts';
+import type { ClientOptions, BackendAPI, ReferencesAPI, CollectionsAPI, SystemAPI } from './client.types.ts';
 import { DirectAdapter, DaemonAdapter, WebSocketAdapter, type ClientAdapter } from './client.adapters.ts';
 
 // Create a proxy that converts method calls to RPC requests
@@ -20,6 +20,7 @@ class BackendClient implements BackendAPI {
 
   // Type-safe service proxies
   readonly references: ReferencesAPI;
+  readonly collections: CollectionsAPI;
   readonly system: SystemAPI;
 
   constructor(options: ClientOptions) {
@@ -49,6 +50,7 @@ class BackendClient implements BackendAPI {
 
     // Create type-safe service proxies
     this.references = createServiceProxy<ReferencesAPI>(this.#adapter, 'references');
+    this.collections = createServiceProxy<CollectionsAPI>(this.#adapter, 'collections');
     this.system = createServiceProxy<SystemAPI>(this.#adapter, 'system');
   }
 

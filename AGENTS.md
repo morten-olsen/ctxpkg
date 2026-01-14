@@ -2,6 +2,15 @@
 
 This document provides guidelines for AI agents working on this codebase.
 
+## Project Focus
+
+**ctxpkg** is a package manager for AI agent context — it helps manage, sync, and distribute reference documentation collections that AI agents can use for context. Think of it as "npm for AI context".
+
+**Core features:**
+- Collection package management (local files and remote packages)
+- Semantic search over indexed documents
+- MCP server integration for AI tools and editors
+
 ## Documentation Maintenance
 
 > **IMPORTANT**: When making changes to the codebase, always check if documentation needs to be updated. If you discover discrepancies between the code and documentation, fix them.
@@ -13,6 +22,7 @@ This document provides guidelines for AI agents working on this codebase.
 | `README.md` | CLI usage, installation, quick start | Adding/changing CLI commands, config options, features |
 | `ARCHITECTURE.md` | Technical design, components, data flow | Adding services, changing structure, modifying data flows |
 | `AGENTS.md` | AI agent guidelines (this file) | Discovering new patterns, conventions, or gotchas |
+| `specs/collection-packages.md` | Collection packages specification | Changing collection/manifest formats |
 
 ### Documentation Checklist
 
@@ -146,13 +156,22 @@ formatTableRow([{ value: 'data', width: 10, color: chalk.cyan }]);
 3. Add `[destroy]` method if cleanup needed
 4. Document in ARCHITECTURE.md
 
-### Adding Agent Tools
+### Adding MCP Tools
 
 1. Create tool file in `src/tools/<category>/`
-2. Use `langchain`'s `tool()` with Zod schema
-3. Export tools object
-4. Add to `createDefaultAgent()` in `src/interact/interact.ts`
-5. Document in ARCHITECTURE.md
+2. Use `defineTool()` from `tools/tools.types.ts` with Zod schema
+3. Export tool definitions
+4. Register on MCP server with `registerMcpTools()`
+5. Add CLI command in `src/cli/cli.mcp.ts`
+6. Document in ARCHITECTURE.md
+
+### Adding Collection Source Types
+
+1. Add new source schema to `src/collections/collections.schemas.ts`
+2. Implement resolution logic in `CollectionsService`
+3. Update CLI commands as needed
+4. Update `specs/collection-packages.md`
+5. Document in README.md
 
 ### Modifying Database Schema
 
@@ -184,6 +203,8 @@ pnpm run build
 3. **Async in Commander**: Actions must be async functions, Commander handles promises
 4. **sqlite-vec**: Loaded via `pool.afterCreate` hook, vectors stored as JSON strings
 5. **ESM**: Project uses ES modules, use `.ts` extensions in imports
+6. **Collection IDs**: `file:{hash}` for local, `pkg:{url}` for packages — computed, not user-assigned
+7. **Aliases are project-local**: The `name` in `context.json` is an alias, not stored in DB
 
 ## Code Quality
 

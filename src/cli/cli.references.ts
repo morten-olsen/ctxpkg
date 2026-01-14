@@ -8,12 +8,16 @@ import {
   formatSuccess,
   formatError,
   formatInfo,
+  formatWarning,
   formatTableHeader,
   formatTableRow,
   withErrorHandling,
   chalk,
 } from './cli.utils.ts';
 import { createCliClient } from './cli.client.ts';
+
+import { Services } from '#root/utils/utils.services.ts';
+import { CollectionsService } from '#root/collections/collections.ts';
 
 const createReferenceCli = (command: Command) => {
   command.description('Manage reference document collections');
@@ -122,16 +126,19 @@ const createReferenceCli = (command: Command) => {
       }),
     );
 
-  // Update collection from glob command
+  // Update collection from glob command (DEPRECATED)
   command
     .command('update-collection')
     .alias('update')
-    .description('Update a collection from files matching a glob pattern')
+    .description('[DEPRECATED] Update a collection from files - use "collections add" + "collections sync" instead')
     .option('-p, --pattern <pattern>', 'Glob pattern to match files (e.g., "**/*.md")', '**/*.md')
     .option('-c, --collection <name>', 'Collection name (defaults to cwd)')
     .option('-d, --cwd <directory>', 'Working directory for glob pattern', process.cwd())
     .action(
       withErrorHandling(async (options: { pattern: string; collection?: string; cwd: string }) => {
+        formatWarning('This command is deprecated. Use "collections add" + "collections sync" instead.');
+        console.log();
+
         const client = await createCliClient();
         try {
           const collectionName = options.collection || options.cwd;
@@ -162,13 +169,27 @@ const createReferenceCli = (command: Command) => {
     .command('search')
     .description('Search for documents in reference collections')
     .argument('<query>', 'Search query')
-    .option('-c, --collections <names...>', 'Limit search to specific collections')
+    .option('-c, --collections <names...>', 'Limit search to specific collections (can be aliases from context.json)')
     .option('-l, --limit <number>', 'Maximum number of results', '10')
     .option('--no-default', 'Do not include default collections in search')
     .action(
       withErrorHandling(async (query: string, options: { collections?: string[]; limit: string; default: boolean }) => {
+        const services = new Services();
         const client = await createCliClient();
         try {
+          const collectionsService = services.get(CollectionsService);
+
+          // Helper to resolve alias to collection ID
+          const resolveCollection = (name: string): string => {
+            // Try to resolve as alias from project config
+            const spec = collectionsService.getFromProjectConfig(name);
+            if (spec) {
+              return collectionsService.computeCollectionId(spec);
+            }
+            // Return as-is (might be a raw collection ID or path)
+            return name;
+          };
+
           // Merge specified collections with default collections and cwd (unless --no-default is set)
           const defaultCollections = config.get('references.defaultCollections') as string[];
           let collectionsToSearch: string[] | undefined;
@@ -179,12 +200,12 @@ const createReferenceCli = (command: Command) => {
               // Always include cwd as a default collection
               collectionsSet.add(process.cwd());
               for (const c of defaultCollections) {
-                collectionsSet.add(c);
+                collectionsSet.add(resolveCollection(c));
               }
             }
             if (options.collections) {
               for (const c of options.collections) {
-                collectionsSet.add(c);
+                collectionsSet.add(resolveCollection(c));
               }
             }
             collectionsToSearch = collectionsSet.size > 0 ? [...collectionsSet] : undefined;
@@ -214,10 +235,10 @@ const createReferenceCli = (command: Command) => {
 
             console.log(
               chalk.bold.white(`${i + 1}.`) +
-              ' ' +
-              chalk.cyan(result.document) +
-              chalk.dim(' in ') +
-              chalk.magenta(result.collection),
+                ' ' +
+                chalk.cyan(result.document) +
+                chalk.dim(' in ') +
+                chalk.magenta(result.collection),
             );
             console.log(chalk.dim('   Distance: ') + distanceColor(result.distance.toFixed(4)));
             console.log();
@@ -235,6 +256,7 @@ const createReferenceCli = (command: Command) => {
           }
         } finally {
           await client.disconnect();
+          await services.destroy();
         }
       }),
     );
@@ -246,8 +268,10 @@ const createReferenceCli = (command: Command) => {
     .description('Interactive search mode')
     .action(
       withErrorHandling(async () => {
+        const services = new Services();
         const client = await createCliClient();
         try {
+          const collectionsService = services.get(CollectionsService);
           const collections = await client.references.listCollections();
 
           if (collections.length === 0) {
@@ -255,17 +279,47 @@ const createReferenceCli = (command: Command) => {
             return;
           }
 
+          // Build a map of collection ID → alias from project config
+          const idToAlias = new Map<string, string>();
+          if (collectionsService.projectConfigExists()) {
+            const projectConfig = collectionsService.readProjectConfig();
+            for (const [alias, spec] of Object.entries(projectConfig.collections)) {
+              const id = collectionsService.computeCollectionId(spec);
+              idToAlias.set(id, alias);
+            }
+          }
+
           formatHeader('Interactive Search');
 
-          // Select collections to search
+          // Sort collections: aliased (from project config) first, then others
+          const sortedCollections = [...collections].sort((a, b) => {
+            const aHasAlias = idToAlias.has(a.collection);
+            const bHasAlias = idToAlias.has(b.collection);
+            if (aHasAlias && !bHasAlias) return -1;
+            if (!aHasAlias && bHasAlias) return 1;
+            // If both have aliases, sort by alias name
+            if (aHasAlias && bHasAlias) {
+              return (idToAlias.get(a.collection) || '').localeCompare(idToAlias.get(b.collection) || '');
+            }
+            // Otherwise keep original order
+            return 0;
+          });
+
+          // Select collections to search - show alias if available
           const selectedCollections = await select({
             message: 'Search in:',
             choices: [
               { name: 'All collections', value: undefined },
-              ...collections.map((c) => ({
-                name: `${c.collection} (${c.document_count} docs)`,
-                value: c.collection,
-              })),
+              ...sortedCollections.map((c) => {
+                const alias = idToAlias.get(c.collection);
+                const displayName = alias
+                  ? `${alias} (${c.document_count} docs)`
+                  : `${c.collection} (${c.document_count} docs)`;
+                return {
+                  name: displayName,
+                  value: c.collection,
+                };
+              }),
             ],
           });
 
@@ -304,10 +358,10 @@ const createReferenceCli = (command: Command) => {
 
             console.log(
               chalk.bold.white(`${i + 1}.`) +
-              ' ' +
-              chalk.cyan(result.document) +
-              chalk.dim(' in ') +
-              chalk.magenta(result.collection),
+                ' ' +
+                chalk.cyan(result.document) +
+                chalk.dim(' in ') +
+                chalk.magenta(result.collection),
             );
             console.log(chalk.dim('   Distance: ') + distanceColor(result.distance.toFixed(4)));
             console.log();
@@ -324,6 +378,7 @@ const createReferenceCli = (command: Command) => {
           }
         } finally {
           await client.disconnect();
+          await services.destroy();
         }
       }),
     );

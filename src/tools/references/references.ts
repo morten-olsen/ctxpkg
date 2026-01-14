@@ -4,17 +4,63 @@ import type { BackendClient } from '#root/client/client.ts';
 import { defineTool, type ToolDefinitions } from '#root/tools/tools.types.ts';
 import { toLangchainTools } from '#root/tools/tools.langchain.ts';
 
+type ReferenceToolOptions = {
+  /** Backend client for API calls */
+  client: BackendClient;
+  /** Optional map of alias names to collection IDs for resolving project-local aliases */
+  aliasMap?: Map<string, string>;
+};
+
+/**
+ * Resolve collection names to IDs, supporting both direct IDs and aliases.
+ */
+const resolveCollections = (
+  collections: string[] | undefined,
+  aliasMap: Map<string, string> | undefined,
+): string[] | undefined => {
+  if (!collections || collections.length === 0) {
+    return undefined;
+  }
+  if (!aliasMap || aliasMap.size === 0) {
+    return collections;
+  }
+  return collections.map((c) => aliasMap.get(c) ?? c);
+};
+
+/**
+ * Resolve a single collection name to ID, supporting both direct IDs and aliases.
+ */
+const resolveCollection = (collection: string, aliasMap: Map<string, string> | undefined): string => {
+  if (!aliasMap) {
+    return collection;
+  }
+  return aliasMap.get(collection) ?? collection;
+};
+
 /**
  * Creates reference document tool definitions that use the provided BackendClient.
  * These tools provide read-only access to the semantic index.
  *
  * Returns common tool definitions that can be converted to Langchain or MCP tools.
+ *
+ * @param options - Configuration options
+ * @param options.client - BackendClient for API calls
+ * @param options.aliasMap - Optional map of project aliases to collection IDs
  */
-const createReferenceToolDefinitions = (client: BackendClient): ToolDefinitions => {
+const createReferenceToolDefinitions = (options: ReferenceToolOptions): ToolDefinitions => {
+  const { client, aliasMap } = options;
+  // Build reverse map for showing aliases in results
+  const idToAlias = new Map<string, string>();
+  if (aliasMap) {
+    for (const [alias, id] of aliasMap.entries()) {
+      idToAlias.set(id, alias);
+    }
+  }
+
   const listCollections = defineTool({
     name: 'references_list_collections',
     description:
-      'List all available reference document collections. Returns collection names and document counts. Use this to discover what reference documentation is available before searching.',
+      'List all available reference document collections. Returns collection names/aliases and document counts. Use this to discover what reference documentation is available before searching.',
     schema: z.object({}),
     handler: async () => {
       const collections = await client.references.listCollections();
@@ -23,10 +69,14 @@ const createReferenceToolDefinitions = (client: BackendClient): ToolDefinitions 
         return 'No reference collections found.';
       }
 
-      return collections.map((c) => ({
-        collection: c.collection,
-        documentCount: c.document_count,
-      }));
+      return collections.map((c) => {
+        const alias = idToAlias.get(c.collection);
+        return {
+          collection: alias ?? c.collection,
+          collectionId: alias ? c.collection : undefined,
+          documentCount: c.document_count,
+        };
+      });
     },
   });
 
@@ -39,13 +89,18 @@ const createReferenceToolDefinitions = (client: BackendClient): ToolDefinitions 
       collections: z
         .array(z.string())
         .optional()
-        .describe('Optional list of collection names to search in. If not provided, searches all collections.'),
+        .describe(
+          'Optional list of collection names or aliases to search in. If not provided, searches all collections.',
+        ),
       limit: z.number().optional().default(10).describe('Maximum number of results to return (default: 10)'),
     }),
     handler: async ({ query, collections, limit }) => {
+      // Resolve any aliases to collection IDs
+      const resolvedCollections = resolveCollections(collections, aliasMap);
+
       const results = await client.references.search({
         query,
-        collections,
+        collections: resolvedCollections,
         limit: limit ?? 10,
       });
 
@@ -53,12 +108,16 @@ const createReferenceToolDefinitions = (client: BackendClient): ToolDefinitions 
         return 'No results found for the given query.';
       }
 
-      return results.map((r) => ({
-        collection: r.collection,
-        document: r.document,
-        content: r.content,
-        relevanceScore: 1 - r.distance, // Convert distance to similarity score
-      }));
+      return results.map((r) => {
+        const alias = idToAlias.get(r.collection);
+        return {
+          collection: alias ?? r.collection,
+          collectionId: alias ? r.collection : undefined,
+          documentId: r.document,
+          content: r.content,
+          relevanceScore: 1 - r.distance, // Convert distance to similarity score
+        };
+      });
     },
   });
 
@@ -67,18 +126,23 @@ const createReferenceToolDefinitions = (client: BackendClient): ToolDefinitions 
     description:
       'Get the full content of a specific reference document. Use this after searching to retrieve the complete document when you need more context than the search chunks provide.',
     schema: z.object({
-      collection: z.string().describe('The collection name containing the document'),
+      collection: z.string().describe('The collection name or alias containing the document'),
       document: z.string().describe('The document ID (typically the file path used when indexing)'),
     }),
     handler: async ({ collection, document }) => {
-      const result = await client.references.getDocument({ collection, id: document });
+      // Resolve alias to collection ID
+      const resolvedCollection = resolveCollection(collection, aliasMap);
+
+      const result = await client.references.getDocument({ collection: resolvedCollection, id: document });
 
       if (!result) {
         return `Document "${document}" not found in collection "${collection}".`;
       }
 
+      const alias = idToAlias.get(result.collection);
       return {
-        collection: result.collection,
+        collection: alias ?? result.collection,
+        collectionId: alias ? result.collection : undefined,
         document: result.id,
         content: result.content,
       };
@@ -96,9 +160,10 @@ const createReferenceToolDefinitions = (client: BackendClient): ToolDefinitions 
  * Creates Langchain reference tools for backward compatibility.
  * @deprecated Use createReferenceToolDefinitions with toLangchainTools instead
  */
-const createReferenceTools = (client: BackendClient) => {
-  const definitions = createReferenceToolDefinitions(client);
+const createReferenceTools = (client: BackendClient, aliasMap?: Map<string, string>) => {
+  const definitions = createReferenceToolDefinitions({ client, aliasMap });
   return toLangchainTools(definitions);
 };
 
 export { createReferenceToolDefinitions, createReferenceTools };
+export type { ReferenceToolOptions };

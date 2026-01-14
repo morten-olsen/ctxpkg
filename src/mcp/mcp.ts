@@ -17,13 +17,15 @@ type ReferencesMcpServerOptions = McpServerOptions & {
   client: BackendClient;
   /** Collections to limit searches to (optional, uses cwd and default collections if not specified) */
   collections?: string[];
+  /** Optional map of project aliases to collection IDs */
+  aliasMap?: Map<string, string>;
 };
 
 /**
  * Create an MCP server with reference document tools.
  */
 const createReferencesMcpServer = (options: ReferencesMcpServerOptions) => {
-  const { client, name = 'ai-assist-references', version = '1.0.0' } = options;
+  const { client, aliasMap, name = 'ctxpkg-references', version = '1.0.0' } = options;
 
   const server = new McpServer({
     name,
@@ -31,7 +33,7 @@ const createReferencesMcpServer = (options: ReferencesMcpServerOptions) => {
   });
 
   // Create and register reference tools
-  const referenceTools = createReferenceToolDefinitions(client);
+  const referenceTools = createReferenceToolDefinitions({ client, aliasMap });
   registerMcpTools(server, referenceTools);
 
   return server;

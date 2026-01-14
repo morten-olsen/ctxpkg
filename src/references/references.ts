@@ -140,6 +140,52 @@ class ReferencesService {
       content: document.content,
     };
   };
+
+  /**
+   * Get all document IDs and hashes in a collection.
+   */
+  public getDocumentIds = async (collection: string): Promise<{ id: string; hash: string }[]> => {
+    const databaseService = this.#services.get(DatabaseService);
+    const database = await databaseService.getInstance();
+
+    const documents = await database(tableNames.referenceDocuments).select('id', 'hash').where({ collection });
+
+    return documents.map((doc) => ({ id: doc.id, hash: doc.hash }));
+  };
+
+  /**
+   * Delete a specific document from a collection.
+   */
+  public deleteDocument = async (collection: string, id: string): Promise<void> => {
+    const databaseService = this.#services.get(DatabaseService);
+    const database = await databaseService.getInstance();
+
+    await database.transaction(async (trx) => {
+      await trx(tableNames.referenceDocumentChunks).delete().where({
+        collection,
+        document: id,
+      });
+      await trx(tableNames.referenceDocuments).delete().where({
+        collection,
+        id,
+      });
+    });
+  };
+
+  /**
+   * Delete multiple documents from a collection.
+   */
+  public deleteDocuments = async (collection: string, ids: string[]): Promise<void> => {
+    if (ids.length === 0) return;
+
+    const databaseService = this.#services.get(DatabaseService);
+    const database = await databaseService.getInstance();
+
+    await database.transaction(async (trx) => {
+      await trx(tableNames.referenceDocumentChunks).delete().where({ collection }).whereIn('document', ids);
+      await trx(tableNames.referenceDocuments).delete().where({ collection }).whereIn('id', ids);
+    });
+  };
 }
 
 export { ReferencesService };

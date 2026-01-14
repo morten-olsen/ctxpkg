@@ -1,44 +1,95 @@
 # Architecture
 
-This document describes the architecture and design of `mortens-ai-assist`.
+This document describes the architecture and design of `ctxpkg`.
 
 ## Overview
 
-The project is a TypeScript CLI application that provides:
+The project is a TypeScript CLI application that provides a **package manager for AI agent context**:
 
-1. An AI chat assistant with tool access (files, git)
-2. A reference document system with semantic search
-3. Configuration management
+1. Collection package management (local files and remote packages)
+2. Semantic search over indexed documents
+3. MCP server integration for AI tools and editors
 4. A daemon mode for persistent backend services
 
 ## Directory Structure
 
 ```
 src/
-├── agent/           # LangChain agent creation
 ├── backend/         # Backend service layer and protocol
 ├── cli/             # CLI command definitions
 ├── client/          # Backend client with multiple adapters
+├── collections/     # Collection package management
 ├── config/          # Configuration management (convict)
 ├── daemon/          # Daemon server and manager
 ├── database/        # SQLite database with migrations
 ├── embedder/        # Text embedding service
-├── interact/        # Interactive chat session
 ├── mcp/             # MCP server creation and management
 ├── references/      # Reference document management
-├── tools/           # Agent tools (files, git, references)
+├── tools/           # MCP tools (references)
 └── utils/           # Shared utilities (service container)
 
 bin/
 ├── cli.js           # CLI entry point
 └── daemon.js        # Daemon entry point
+
+specs/
+└── collection-packages.md  # Collection packages specification
 ```
 
 ## Core Components
 
+### Collections (`src/collections/`)
+
+The heart of the application — package manager for AI context.
+
+**Files:**
+- `collections.ts` - Main CollectionsService class
+- `collections.schemas.ts` - Zod schemas for project config, manifests, and database records
+
+**Collection Types:**
+
+| Type | Description | Source |
+|------|-------------|--------|
+| `file` | Local ad-hoc indexing | Path + glob pattern |
+| `pkg` | Shareable packages | Manifest URL or bundle |
+
+**Key Concepts:**
+
+- **Project Config** (`context.json`): Per-project file mapping aliases to collection specs
+- **Manifest** (`manifest.json`): Package definition with name, version, and sources
+- **Bundle** (`.tar.gz`): Distributable archive with manifest and files
+- **Collection ID**: Unique identifier (`file:{hash}` or `pkg:{url}`)
+
+**Sync Process:**
+
+```
+1. Read project config (context.json)
+2. For each collection:
+   a. Compute collection ID from spec
+   b. Fetch manifest or expand glob
+   c. Compare with existing indexed documents (hash-based)
+   d. Add/update/remove documents as needed
+3. Update collection metadata in database
+```
+
+### References (`src/references/`)
+
+Document storage and semantic search:
+
+- Documents organized into collections (keyed by collection ID)
+- Content chunked using `RecursiveCharacterTextSplitter`
+- Chunks embedded and stored with vectors
+- Search uses L2 distance for similarity
+
+**Key Methods:**
+- `updateDocument()` - Index a document (chunk, embed, store)
+- `search()` - Semantic search across collections
+- `getDocumentIds()` - List documents for sync reconciliation
+- `deleteDocuments()` - Remove orphaned documents
+
 ### Backend (`src/backend/`)
 
-The backend provides a protocol-agnostic service layer that can run in-process or as a daemon.
+Protocol-agnostic service layer that can run in-process or as a daemon.
 
 **Files:**
 - `backend.ts` - Main Backend class, handles request routing
@@ -47,58 +98,14 @@ The backend provides a protocol-agnostic service layer that can run in-process o
 - `backend.types.ts` - Shared type definitions for backend API
 - `backend.schemas.ts` - Zod schemas for validation
 
-**Architecture:**
-```
-Request (JSON-RPC style)
-    ↓
-Backend.handleRequest()
-    ↓
-Route to service.method
-    ↓
-Validate params with Zod
-    ↓
-Execute handler
-    ↓
-Response (result or error)
-```
-
-**Adding new backend methods:**
-1. Define the procedure in `backend.services.ts` using `procedure(schema, handler)`
-2. Add the type definition to `backend.types.ts`
-3. Types are automatically available in the client
-
-### Daemon (`src/daemon/`)
-
-The daemon runs the backend as a persistent process, accessible via Unix socket.
-
-**Files:**
-- `daemon.ts` - Main Daemon class with WebSocket server
-- `daemon.manager.ts` - Client-side daemon lifecycle management
-- `daemon.config.ts` - Socket paths and configuration
-- `daemon.schemas.ts` - Status and options schemas
-
-**Features:**
-- WebSocket server over Unix socket
-- Auto-shutdown after 5 minutes idle (configurable)
-- PID file for process management
-- Graceful shutdown handling
-
-**CLI Commands:**
-```bash
-ai-assist daemon start    # Start the daemon
-ai-assist daemon stop     # Stop the daemon
-ai-assist daemon status   # Show daemon status
-ai-assist daemon restart  # Restart the daemon
-```
+**Services:**
+- `references` - Document search and management
+- `collections` - Collection sync and status
+- `system` - Ping, status, shutdown
 
 ### Client (`src/client/`)
 
-Unified client for interacting with the backend, with multiple connection modes.
-
-**Files:**
-- `client.ts` - BackendClient class
-- `client.adapters.ts` - DirectAdapter, DaemonAdapter, WebSocketAdapter
-- `client.types.ts` - Re-exports backend types for client use
+Unified client for interacting with the backend.
 
 **Connection Modes:**
 - `direct` - In-process backend (no daemon)
@@ -109,35 +116,25 @@ Unified client for interacting with the backend, with multiple connection modes.
 ```typescript
 import { BackendClient } from '#root/client/client.ts';
 
-// Direct mode (in-process)
 const client = new BackendClient({ mode: 'direct' });
 await client.connect();
 
-// Daemon mode (auto-starts if needed)
-const client = new BackendClient({ mode: 'daemon', autoStartDaemon: true });
-await client.connect();
-
 // Type-safe API calls
-const collections = await client.references.listCollections();
 const results = await client.references.search({ query: 'hello', limit: 10 });
+await client.collections.sync({ name: 'docs', spec: {...}, cwd: '/path' });
 
 await client.disconnect();
 ```
 
-### Service Container (`src/utils/utils.services.ts`)
+### Daemon (`src/daemon/`)
 
-A lightweight dependency injection container that:
+Persistent backend process for better performance.
 
-- Lazily instantiates services on first access
-- Manages service lifecycle with a `destroy` symbol
-- Enables service mocking for tests
-
-```typescript
-const services = new Services();
-const db = services.get(DatabaseService);
-// ... use services
-await services.destroy(); // cleanup
-```
+**Features:**
+- WebSocket server over Unix socket
+- Auto-shutdown after idle timeout (configurable)
+- PID file for process management
+- Graceful shutdown handling
 
 ### Database (`src/database/`)
 
@@ -148,128 +145,32 @@ SQLite database using Knex query builder with:
 - Migration system in `migrations/`
 
 **Tables:**
+- `collections` - Collection metadata and sync state
 - `reference_documents` - Document metadata and content
 - `reference_document_chunks` - Chunked content with embeddings
 
-### Embedder (`src/embedder/embedder.ts`)
+### Embedder (`src/embedder/`)
 
-Generates text embeddings using HuggingFace Transformers:
+Local text embedding using HuggingFace Transformers:
 
 - Model: `mixedbread-ai/mxbai-embed-large-v1`
 - Local inference (no API calls)
-- Used for semantic search in reference documents
-
-### Agent (`src/agent/agent.ts`)
-
-Creates LangChain ReAct agents with:
-
-- OpenAI-compatible chat models
-- Configurable tools
-- System prompts
-
-### Tools (`src/tools/`)
-
-Agent tools organized by domain with a common definition format that can be converted to Langchain or MCP tools.
-
-**Common Tool Format** (`tools/tools.types.ts`):
-
-Tools are defined using a framework-agnostic format:
-
-```typescript
-import { defineTool } from '#root/tools/tools.types.ts';
-import * as z from 'zod';
-
-const myTool = defineTool({
-  name: 'my_tool',
-  description: 'What this tool does',
-  schema: z.object({
-    param: z.string().describe('A parameter'),
-  }),
-  handler: async ({ param }) => {
-    // Implementation
-    return result;
-  },
-});
-```
-
-**Tool Conversion** (`tools/tools.langchain.ts`, `tools/tools.mcp.ts`):
-
-```typescript
-// Convert to Langchain tools
-import { toLangchainTools } from '#root/tools/tools.langchain.ts';
-const langchainTools = toLangchainTools(toolDefinitions);
-
-// Register on MCP server
-import { registerMcpTools } from '#root/tools/tools.mcp.ts';
-registerMcpTools(mcpServer, toolDefinitions);
-```
-
-**File Tools** (`tools/files/files.ts`):
-- `file_get_content` - Read file contents
-- `file_glob_files` - Find files by pattern
-- `file_search_multiline` - Regex search in files
-- `file_get_stats` - File metadata
-
-**Git Tools** (`tools/git/git.ts`):
-- `git_status` - Repository status
-- `git_get_diff` - Show diffs
-- `git_get_log` - Commit history
-
-**Reference Tools** (`tools/references/references.ts`):
-- `references_list_collections` - List available document collections
-- `references_search` - Semantic search across reference documents
-- `references_get_document` - Retrieve full document content
-
-> Note: Reference tools use a `BackendClient` instance and are created via `createReferenceToolDefinitions(client)`.
+- 1024-dimensional vectors
 
 ### MCP Server (`src/mcp/`)
 
-Provides Model Context Protocol (MCP) servers for integration with AI tools and editors.
+Model Context Protocol server for AI tool integration.
 
-**Files:**
-- `mcp.ts` - MCP server creation and stdio transport
+**Tools Exposed:**
+- `references_list_collections` - List available collections
+- `references_search` - Semantic search
+- `references_get_document` - Retrieve full document
 
-**Features:**
-- Stdio-based MCP transport for CLI integration
-- Tool registration from common tool definitions
-- Graceful shutdown handling
-
-**Creating an MCP Server:**
-
-```typescript
-import { createReferencesMcpServer, runMcpServer } from '#root/mcp/mcp.ts';
-import { BackendClient } from '#root/client/client.ts';
-
-const client = new BackendClient({ mode: 'direct' });
-await client.connect();
-
-const server = createReferencesMcpServer({
-  client,
-  name: 'my-server',
-  version: '1.0.0',
-});
-
-await runMcpServer(server);
-```
-
-**CLI Usage:**
-
+**Usage:**
 ```bash
-# Start MCP server with reference tools
-mortens-ai-assist mcp references
-
-# Limit to specific collections
-mortens-ai-assist mcp ref -c my-docs
+ctxpkg mcp references
+ctxpkg mcp ref -c my-docs
 ```
-
-### References (`src/references/`)
-
-Document management with semantic search:
-
-- Documents organized into collections
-- Content chunked using `RecursiveCharacterTextSplitter`
-- Chunks embedded and stored with vectors
-- Search uses L2 distance for similarity
 
 ### CLI (`src/cli/`)
 
@@ -278,107 +179,91 @@ Commander.js-based CLI split into modules:
 | File | Purpose |
 |------|---------|
 | `cli.ts` | Main entry, mounts subcommands |
-| `cli.utils.ts` | Shared formatting utilities |
-| `cli.client.ts` | Client factory for CLI commands |
+| `cli.collections.ts` | Collection package management |
+| `cli.references.ts` | Reference document queries |
 | `cli.config.ts` | Config management commands |
 | `cli.daemon.ts` | Daemon management commands |
-| `cli.interact.ts` | Chat/prompt commands |
 | `cli.mcp.ts` | MCP server commands |
-| `cli.references.ts` | Reference document commands |
+| `cli.utils.ts` | Shared formatting utilities |
+| `cli.client.ts` | Client factory for CLI commands |
+
+### Service Container (`src/utils/`)
+
+Lightweight dependency injection:
+
+```typescript
+const services = new Services();
+const db = services.get(DatabaseService);
+await services.destroy(); // cleanup
+```
 
 ## Data Flow
 
-### Client-Backend Communication
+### Collection Sync
 
 ```
-CLI Command
+context.json (project config)
     ↓
-createCliClient() - auto-detects daemon or direct mode
+CollectionsService.syncCollection()
     ↓
-BackendClient.connect()
+┌─────────────────────────────────┐
+│       Resolve Sources           │
+├─────────────┬───────────────────┤
+│ file type   │ pkg type          │
+│ (glob)      │ (manifest/bundle) │
+└─────────────┴───────────────────┘
     ↓
-┌─────────────────────────────────────────┐
-│            Adapter Selection            │
-├─────────────┬─────────────┬─────────────┤
-│   Direct    │   Daemon    │  WebSocket  │
-│ (in-process)│(Unix socket)│  (remote)   │
-└─────────────┴─────────────┴─────────────┘
+Compare with existing documents
     ↓
-Backend.handleRequest()
+Add/Update/Remove via ReferencesService
     ↓
-Service Method Execution
-    ↓
-Response → Client
+Update collection metadata
 ```
 
-### Chat Session
-
-```
-User Input
-    ↓
-startSession() (interact.ts)
-    ↓
-createCliClient() → BackendClient
-    ↓
-createDefaultAgent(client) → createAgent() (agent.ts)
-    ↓
-ChatOpenAI + Tools (including reference tools via client)
-    ↓
-agent.stream() → Response
-```
-
-### Reference Search
+### Semantic Search
 
 ```
 Query Text
     ↓
-BackendClient.references.search()
-    ↓
-Backend → ReferencesService.search()
-    ↓
 EmbedderService.createEmbeddings()
     ↓
-Vector Embedding
+Vector Embedding (1024-dim)
     ↓
 SQLite vec_distance_L2() query
     ↓
 Ranked Results
 ```
 
-### Document Indexing
+### Client-Backend Communication
 
 ```
-Glob Pattern
+CLI Command
     ↓
-Read Files
+createCliClient() - auto-detects mode
     ↓
-RecursiveCharacterTextSplitter
+BackendClient.connect()
     ↓
-Chunks
+┌─────────────────────────────────┐
+│       Adapter Selection         │
+├───────────┬───────────┬─────────┤
+│  Direct   │  Daemon   │ WebSocket│
+└───────────┴───────────┴─────────┘
     ↓
-EmbedderService.createEmbeddings()
+Backend.handleRequest()
     ↓
-Store in SQLite (document + chunks)
+Response → Client
 ```
 
 ## Configuration
 
-Uses `convict` for configuration with:
+Uses `convict` for configuration:
 
-- Schema validation
-- Environment variable support
-- Sensitive value redaction
-- File persistence
-
-**Schema** (`src/config/config.ts`):
 ```typescript
 {
-  openai: {
-    apiKey: { sensitive: true, env: 'OPENAI_API_KEY' },
-    baseUrl: { env: 'OPENAI_BASE_URL' },
-    model: { env: 'OPENAI_MODEL' },
-    temperature: { default: 0 }
-  }
+  database: { path: '~/.local/share/ai-assist/database.sqlite' },
+  daemon: { socketPath, pidFile, idleTimeout, autoStart },
+  references: { defaultCollections: [] },
+  project: { configFile: 'context.json' }
 }
 ```
 
@@ -389,67 +274,38 @@ Uses `convict` for configuration with:
 | `commander` | CLI framework |
 | `@inquirer/prompts` | Interactive prompts |
 | `chalk` | Terminal colors |
-| `langchain` | AI agent framework |
-| `@langchain/openai` | OpenAI integration |
 | `@modelcontextprotocol/sdk` | MCP server implementation |
 | `knex` | SQL query builder |
 | `better-sqlite3` | SQLite driver |
 | `sqlite-vec` | Vector search extension |
 | `@huggingface/transformers` | Local embeddings |
 | `convict` | Configuration management |
-| `simple-git` | Git operations |
+| `tar` | Bundle creation/extraction |
 | `zod` | Schema validation |
 | `ws` | WebSocket implementation |
 
 ## Extension Points
 
-### Adding New Backend Methods
+### Adding New Collections Sources
 
-1. Add procedure to `src/backend/backend.services.ts`:
-   ```typescript
-   const myService = {
-     myMethod: procedure(mySchema, async (params) => {
-       // implementation
-       return result;
-     }),
-   };
-   ```
+1. Add new source type to `collections.schemas.ts`
+2. Implement resolution in `CollectionsService`
+3. Update CLI to accept new source format
 
-2. Add types to `src/backend/backend.types.ts`:
-   ```typescript
-   export type MyServiceAPI = {
-     myMethod(params: MyParams): Promise<MyResult>;
-   };
-   ```
+### Adding MCP Tools
 
-3. Update `BackendAPI` type and add proxy in `client.ts`
-4. Types are automatically available in the client
+1. Define tool in `src/tools/` using `defineTool()`
+2. Register on MCP server with `registerMcpTools()`
+3. Add CLI command in `cli.mcp.ts`
 
-### Adding New Tools
+### Adding Backend Methods
 
-1. Create tool file in `src/tools/<domain>/`
-2. Define tools using `defineTool()` from `tools/tools.types.ts`
-3. Export tool definitions
-4. Convert to Langchain tools with `toLangchainTools()` for agent use
-5. Register on MCP servers with `registerMcpTools()`
-6. Add to agent in `src/interact/interact.ts`
-
-### Adding MCP Servers
-
-1. Create server factory in `src/mcp/` using `McpServer` from SDK
-2. Register tools using `registerMcpTools(server, definitions)`
-3. Add CLI command in `src/cli/cli.mcp.ts`
-4. Document configuration options in README.md
+1. Add procedure in `backend.services.ts`
+2. Add types in `backend.types.ts`
+3. Add proxy in `client.ts`
 
 ### Adding CLI Commands
 
 1. Create `src/cli/cli.<domain>.ts`
-2. Export `create<Domain>Cli(command: Command)` function
-3. Use utilities from `cli.utils.ts`
-4. Mount in `cli.ts`
-
-### Adding Services
-
-1. Create service class with constructor accepting `Services`
-2. Optionally implement `[destroy]` for cleanup
-3. Access via `services.get(MyService)`
+2. Export `create<Domain>Cli(command: Command)`
+3. Mount in `cli.ts`

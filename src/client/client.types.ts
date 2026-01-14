@@ -2,6 +2,7 @@
 export type {
   BackendAPI,
   ReferencesAPI,
+  CollectionsAPI,
   SystemAPI,
   CollectionInfo,
   UpdateCollectionOptions,
@@ -12,6 +13,11 @@ export type {
   ReferenceDocument,
   SearchChunkItem,
   SearchChunksOptions,
+  SyncCollectionParams,
+  SyncResult,
+  CollectionRecordInfo,
+  GetSyncStatusParams,
+  CollectionSpec,
 } from '#root/backend/backend.types.ts';
 
 // Connection modes

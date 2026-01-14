@@ -4,9 +4,10 @@
  */
 
 import type { ReferenceDocument, SearchChunkItem, SearchChunksOptions } from '#root/references/references.schemas.ts';
+import type { CollectionSpec } from '#root/collections/collections.schemas.ts';
 
 // Re-export types that are used in the API
-export type { ReferenceDocument, SearchChunkItem, SearchChunksOptions };
+export type { ReferenceDocument, SearchChunkItem, SearchChunksOptions, CollectionSpec };
 
 // Collection info returned by listCollections
 export type CollectionInfo = {
@@ -45,6 +46,32 @@ export type PingResponse = {
   timestamp: number;
 };
 
+// Collections types
+export type SyncCollectionParams = {
+  name: string;
+  spec: CollectionSpec;
+  cwd: string;
+  force?: boolean;
+};
+
+export type SyncResult = {
+  added: number;
+  updated: number;
+  removed: number;
+  total: number;
+};
+
+export type CollectionRecordInfo = {
+  id: string;
+  type: 'file' | 'pkg';
+  lastSyncAt: string | null;
+};
+
+export type GetSyncStatusParams = {
+  spec: CollectionSpec;
+  cwd: string;
+};
+
 /**
  * References service API definition.
  * Defines all methods available on the references service.
@@ -55,6 +82,15 @@ export type ReferencesAPI = {
   updateCollection(params: UpdateCollectionOptions): Promise<void>;
   search(params: SearchChunksOptions): Promise<SearchChunkItem[]>;
   getDocument(params: GetDocumentParams): Promise<ReferenceDocument | null>;
+};
+
+/**
+ * Collections service API definition.
+ */
+export type CollectionsAPI = {
+  sync(params: SyncCollectionParams): Promise<SyncResult>;
+  list(): Promise<CollectionRecordInfo[]>;
+  getSyncStatus(params: GetSyncStatusParams): Promise<'synced' | 'not_synced' | 'stale'>;
 };
 
 /**
@@ -72,5 +108,6 @@ export type SystemAPI = {
  */
 export type BackendAPI = {
   references: ReferencesAPI;
+  collections: CollectionsAPI;
   system: SystemAPI;
 };

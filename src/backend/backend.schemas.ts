@@ -49,7 +49,44 @@ const pingResponseSchema = z.object({
   timestamp: z.number(),
 });
 
-export type { CollectionInfo, UpdateCollectionOptions, SystemStatus };
+// Collections schemas
+const syncCollectionParamsSchema = z.object({
+  name: z.string(),
+  spec: z.discriminatedUnion('type', [
+    z.object({ type: z.literal('file'), path: z.string(), glob: z.string() }),
+    z.object({ type: z.literal('pkg'), url: z.string() }),
+  ]),
+  cwd: z.string(),
+  force: z.boolean().optional(),
+});
+
+type SyncCollectionParams = z.infer<typeof syncCollectionParamsSchema>;
+
+const syncResultSchema = z.object({
+  added: z.number(),
+  updated: z.number(),
+  removed: z.number(),
+  total: z.number(),
+});
+
+type SyncResult = z.infer<typeof syncResultSchema>;
+
+const collectionRecordInfoSchema = z.object({
+  id: z.string(),
+  type: z.enum(['file', 'pkg']),
+  lastSyncAt: z.string().nullable(),
+});
+
+type CollectionRecordInfo = z.infer<typeof collectionRecordInfoSchema>;
+
+export type {
+  CollectionInfo,
+  UpdateCollectionOptions,
+  SystemStatus,
+  SyncCollectionParams,
+  SyncResult,
+  CollectionRecordInfo,
+};
 export {
   referenceDocumentSchema,
   searchChunksOptionsSchema,
@@ -60,4 +97,7 @@ export {
   getDocumentParamsSchema,
   systemStatusSchema,
   pingResponseSchema,
+  syncCollectionParamsSchema,
+  syncResultSchema,
+  collectionRecordInfoSchema,
 };

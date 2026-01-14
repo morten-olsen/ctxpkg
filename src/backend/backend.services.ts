@@ -6,11 +6,13 @@ import {
   updateCollectionOptionsSchema,
   dropCollectionParamsSchema,
   getDocumentParamsSchema,
+  syncCollectionParamsSchema,
 } from './backend.schemas.ts';
-import type { CollectionInfo, SystemStatus } from './backend.schemas.ts';
+import type { CollectionInfo, SystemStatus, SyncResult, CollectionRecordInfo } from './backend.schemas.ts';
 
 import type { Services } from '#root/utils/utils.services.ts';
 import { ReferencesService } from '#root/references/references.ts';
+import { CollectionsService } from '#root/collections/collections.ts';
 import type { ReferenceDocument, SearchChunkItem } from '#root/references/references.schemas.ts';
 
 // Factory to create service procedures with access to Services container
@@ -43,6 +45,40 @@ const createBackendServices = (services: Services, getStatus: () => { uptime: nu
     }),
   };
 
+  // Collections service procedures
+  const collections = {
+    sync: procedure(syncCollectionParamsSchema, async (params): Promise<SyncResult> => {
+      const colService = services.get(CollectionsService);
+      return colService.syncCollection(params.name, params.spec, params.cwd, {
+        force: params.force,
+      });
+    }),
+
+    list: procedure(z.object({}), async (): Promise<CollectionRecordInfo[]> => {
+      const colService = services.get(CollectionsService);
+      const records = await colService.listCollections();
+      return records.map((r) => ({
+        id: r.id,
+        type: r.type,
+        lastSyncAt: r.last_sync_at,
+      }));
+    }),
+
+    getSyncStatus: procedure(
+      z.object({
+        spec: z.discriminatedUnion('type', [
+          z.object({ type: z.literal('file'), path: z.string(), glob: z.string() }),
+          z.object({ type: z.literal('pkg'), url: z.string() }),
+        ]),
+        cwd: z.string(),
+      }),
+      async (params): Promise<'synced' | 'not_synced' | 'stale'> => {
+        const colService = services.get(CollectionsService);
+        return colService.getSyncStatus(params.spec, params.cwd);
+      },
+    ),
+  };
+
   // System procedures
   const system = {
     ping: procedure(z.object({}), async (): Promise<{ pong: true; timestamp: number }> => {
@@ -54,7 +90,7 @@ const createBackendServices = (services: Services, getStatus: () => { uptime: nu
       return {
         uptime: status.uptime,
         connections: status.connections,
-        services: ['references'],
+        services: ['references', 'collections'],
       };
     }),
 
@@ -64,7 +100,7 @@ const createBackendServices = (services: Services, getStatus: () => { uptime: nu
     }),
   };
 
-  return { references, system };
+  return { references, collections, system };
 };
 
 // Type for the services object returned by createBackendServices

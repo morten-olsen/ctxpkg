@@ -1,6 +1,7 @@
 import type { Migration } from './migrations.types.ts';
 
 const tableNames = {
+  collections: 'collections',
   referenceDocuments: 'reference_documents',
   referenceDocumentChunks: 'reference_documentchunks',
 };
@@ -8,6 +9,27 @@ const tableNames = {
 const init: Migration = {
   name: 'init',
   up: async (knex) => {
+    await knex.schema.createTable(tableNames.collections, (table) => {
+      table.string('id').primary();
+      table.string('type').notNullable(); // 'file' or 'pkg'
+
+      // file type fields
+      table.string('path').nullable();
+      table.string('glob').nullable();
+
+      // pkg type fields
+      table.text('url').nullable();
+      table.string('manifest_hash').nullable();
+
+      // sync state
+      table.string('last_sync_at').nullable();
+
+      table.string('created_at').notNullable();
+      table.string('updated_at').notNullable();
+
+      table.index(['type']);
+    });
+
     await knex.schema.createTable(tableNames.referenceDocuments, (table) => {
       table.string('collection').notNullable();
       table.string('id').notNullable().index();
@@ -31,6 +53,7 @@ const init: Migration = {
   down: async (knex) => {
     await knex.schema.dropTable(tableNames.referenceDocumentChunks);
     await knex.schema.dropTable(tableNames.referenceDocuments);
+    await knex.schema.dropTable(tableNames.collections);
   },
 };
 

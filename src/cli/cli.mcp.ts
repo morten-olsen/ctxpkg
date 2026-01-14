@@ -6,6 +6,9 @@ import { createReferencesMcpServer, runMcpServer } from '../mcp/mcp.ts';
 import { createCliClient } from './cli.client.ts';
 import { withErrorHandling } from './cli.utils.ts';
 
+import { CollectionsService } from '#root/collections/collections.ts';
+import { Services } from '#root/utils/utils.services.ts';
+
 const createMcpCli = (command: Command) => {
   command.description('Start MCP servers for tool integration');
 
@@ -16,12 +19,30 @@ const createMcpCli = (command: Command) => {
     .description('Start an MCP server with reference document tools')
     .option('-c, --collections <names...>', 'Limit searches to specific collections')
     .option('--no-default', 'Do not include default collections')
-    .option('--name <name>', 'MCP server name', 'ai-assist-references')
+    .option('--name <name>', 'MCP server name', 'ctxpkg-references')
     .option('--version <version>', 'MCP server version', '1.0.0')
     .action(
       withErrorHandling(
         async (options: { collections?: string[]; default: boolean; name: string; version: string }) => {
           const client = await createCliClient();
+
+          // Build alias map from project config
+          const aliasMap = new Map<string, string>();
+          const services = new Services();
+          try {
+            const collectionsService = services.get(CollectionsService);
+            const cwd = process.cwd();
+
+            if (collectionsService.projectConfigExists(cwd)) {
+              const projectConfig = collectionsService.readProjectConfig(cwd);
+              for (const [alias, spec] of Object.entries(projectConfig.collections)) {
+                const collectionId = collectionsService.computeCollectionId(spec, cwd);
+                aliasMap.set(alias, collectionId);
+              }
+            }
+          } finally {
+            await services.destroy();
+          }
 
           // Build collections list similar to cli.references.ts search command
           let collectionsToUse: string[] | undefined;
@@ -50,6 +71,7 @@ const createMcpCli = (command: Command) => {
           // Create and run MCP server
           const server = createReferencesMcpServer({
             client,
+            aliasMap,
             collections: collectionsToUse,
             name: options.name,
             version: options.version,
