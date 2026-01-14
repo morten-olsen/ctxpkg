@@ -3,6 +3,7 @@ import { Command } from 'commander';
 import { createConfigCli } from './cli.config.ts';
 import { createDaemonCli } from './cli.daemon.ts';
 import { createInteractCli } from './cli.interact.ts';
+import { createMcpCli } from './cli.mcp.ts';
 import { createReferenceCli } from './cli.references.ts';
 
 const createProgram = () => {
@@ -15,6 +16,7 @@ const createProgram = () => {
   createConfigCli(program.command('config').alias('cfg').description('Manage configuration'));
   createReferenceCli(program.command('references').alias('ref').description('Manage reference documents'));
   createDaemonCli(program.command('daemon').description('Manage the background daemon'));
+  createMcpCli(program.command('mcp').description('Start MCP servers for tool integration'));
 
   // Add top-level shortcuts for common commands
   program

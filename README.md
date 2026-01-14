@@ -109,6 +109,40 @@ mortens-ai-assist ref drop my-docs      # specific collection
 mortens-ai-assist ref drop my-docs -f   # skip confirmation
 ```
 
+### MCP Server Commands
+
+Start MCP (Model Context Protocol) servers for integration with AI tools and editors.
+
+```bash
+# Start an MCP server with reference document tools
+mortens-ai-assist mcp references
+mortens-ai-assist mcp ref
+
+# Limit to specific collections
+mortens-ai-assist mcp ref -c my-docs project-docs
+
+# Disable default collections (cwd + configured defaults)
+mortens-ai-assist mcp ref --no-default -c my-docs
+
+# Custom server name and version
+mortens-ai-assist mcp ref --name my-assistant --version 2.0.0
+```
+
+**MCP Configuration:**
+
+To use the MCP server with an AI tool or editor, add it to your MCP client configuration:
+
+```json
+{
+  "mcpServers": {
+    "ai-assist-references": {
+      "command": "mortens-ai-assist",
+      "args": ["mcp", "references"]
+    }
+  }
+}
+```
+
 ### Command Aliases
 
 | Full Command | Alias |
@@ -122,6 +156,7 @@ mortens-ai-assist ref drop my-docs -f   # skip confirmation
 | `references drop-collection` | `ref drop` |
 | `references update-collection` | `ref update` |
 | `references interactive-search` | `ref isearch` |
+| `mcp references` | `mcp ref` |
 
 ## Features
 
@@ -169,4 +204,4 @@ pnpm run build
 
 ## License
 
-MIT
+This project is licensed under the [GNU Affero General Public License v3.0 (AGPL-3.0)](LICENSE).

@@ -24,6 +24,7 @@ src/
 ├── database/        # SQLite database with migrations
 ├── embedder/        # Text embedding service
 ├── interact/        # Interactive chat session
+├── mcp/             # MCP server creation and management
 ├── references/      # Reference document management
 ├── tools/           # Agent tools (files, git, references)
 └── utils/           # Shared utilities (service container)
@@ -168,7 +169,40 @@ Creates LangChain ReAct agents with:
 
 ### Tools (`src/tools/`)
 
-Agent tools organized by domain:
+Agent tools organized by domain with a common definition format that can be converted to Langchain or MCP tools.
+
+**Common Tool Format** (`tools/tools.types.ts`):
+
+Tools are defined using a framework-agnostic format:
+
+```typescript
+import { defineTool } from '#root/tools/tools.types.ts';
+import * as z from 'zod';
+
+const myTool = defineTool({
+  name: 'my_tool',
+  description: 'What this tool does',
+  schema: z.object({
+    param: z.string().describe('A parameter'),
+  }),
+  handler: async ({ param }) => {
+    // Implementation
+    return result;
+  },
+});
+```
+
+**Tool Conversion** (`tools/tools.langchain.ts`, `tools/tools.mcp.ts`):
+
+```typescript
+// Convert to Langchain tools
+import { toLangchainTools } from '#root/tools/tools.langchain.ts';
+const langchainTools = toLangchainTools(toolDefinitions);
+
+// Register on MCP server
+import { registerMcpTools } from '#root/tools/tools.mcp.ts';
+registerMcpTools(mcpServer, toolDefinitions);
+```
 
 **File Tools** (`tools/files/files.ts`):
 - `file_get_content` - Read file contents
@@ -186,7 +220,47 @@ Agent tools organized by domain:
 - `references_search` - Semantic search across reference documents
 - `references_get_document` - Retrieve full document content
 
-> Note: Reference tools use a `BackendClient` instance and are created via `createReferenceTools(client)`.
+> Note: Reference tools use a `BackendClient` instance and are created via `createReferenceToolDefinitions(client)`.
+
+### MCP Server (`src/mcp/`)
+
+Provides Model Context Protocol (MCP) servers for integration with AI tools and editors.
+
+**Files:**
+- `mcp.ts` - MCP server creation and stdio transport
+
+**Features:**
+- Stdio-based MCP transport for CLI integration
+- Tool registration from common tool definitions
+- Graceful shutdown handling
+
+**Creating an MCP Server:**
+
+```typescript
+import { createReferencesMcpServer, runMcpServer } from '#root/mcp/mcp.ts';
+import { BackendClient } from '#root/client/client.ts';
+
+const client = new BackendClient({ mode: 'direct' });
+await client.connect();
+
+const server = createReferencesMcpServer({
+  client,
+  name: 'my-server',
+  version: '1.0.0',
+});
+
+await runMcpServer(server);
+```
+
+**CLI Usage:**
+
+```bash
+# Start MCP server with reference tools
+mortens-ai-assist mcp references
+
+# Limit to specific collections
+mortens-ai-assist mcp ref -c my-docs
+```
 
 ### References (`src/references/`)
 
@@ -209,6 +283,7 @@ Commander.js-based CLI split into modules:
 | `cli.config.ts` | Config management commands |
 | `cli.daemon.ts` | Daemon management commands |
 | `cli.interact.ts` | Chat/prompt commands |
+| `cli.mcp.ts` | MCP server commands |
 | `cli.references.ts` | Reference document commands |
 
 ## Data Flow
@@ -316,6 +391,7 @@ Uses `convict` for configuration with:
 | `chalk` | Terminal colors |
 | `langchain` | AI agent framework |
 | `@langchain/openai` | OpenAI integration |
+| `@modelcontextprotocol/sdk` | MCP server implementation |
 | `knex` | SQL query builder |
 | `better-sqlite3` | SQLite driver |
 | `sqlite-vec` | Vector search extension |
@@ -352,9 +428,18 @@ Uses `convict` for configuration with:
 ### Adding New Tools
 
 1. Create tool file in `src/tools/<domain>/`
-2. Define tools using `langchain`'s `tool()` helper
-3. Export tool collection
-4. Add to agent in `src/interact/interact.ts`
+2. Define tools using `defineTool()` from `tools/tools.types.ts`
+3. Export tool definitions
+4. Convert to Langchain tools with `toLangchainTools()` for agent use
+5. Register on MCP servers with `registerMcpTools()`
+6. Add to agent in `src/interact/interact.ts`
+
+### Adding MCP Servers
+
+1. Create server factory in `src/mcp/` using `McpServer` from SDK
+2. Register tools using `registerMcpTools(server, definitions)`
+3. Add CLI command in `src/cli/cli.mcp.ts`
+4. Document configuration options in README.md
 
 ### Adding CLI Commands
 

@@ -36,6 +36,7 @@
   },
   "name": "@morten-olsen/ai-assist",
   "version": "1.0.0",
+  "license": "AGPL-3.0",
   "imports": {
     "#root/*": "./src/*"
   },
