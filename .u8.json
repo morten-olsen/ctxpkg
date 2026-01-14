@@ -1,0 +1,25 @@
+{
+  "values": {
+    "monoRepo": false,
+    "packageVersion": "1.0.0"
+  },
+  "entries": [
+    {
+      "timestamp": "2026-01-14T07:34:34.719Z",
+      "template": "pkg",
+      "values": {
+        "monoRepo": false,
+        "packageName": "@morten-olsen/ai-assist",
+        "packageVersion": "1.0.0"
+      }
+    },
+    {
+      "timestamp": "2026-01-14T07:34:48.833Z",
+      "template": "eslint",
+      "values": {
+        "monoRepo": false,
+        "packageVersion": "1.0.0"
+      }
+    }
+  ]
+}
