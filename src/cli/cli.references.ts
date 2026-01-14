@@ -11,9 +11,7 @@ import {
   withErrorHandling,
   chalk,
 } from './cli.utils.ts';
-
-import { ReferencesService } from '#root/references/references.ts';
-import { Services } from '#root/utils/utils.services.ts';
+import { createCliClient } from './cli.client.ts';
 
 const createReferenceCli = (command: Command) => {
   command.description('Manage reference document collections');
@@ -25,10 +23,9 @@ const createReferenceCli = (command: Command) => {
     .description('List all reference collections')
     .action(
       withErrorHandling(async () => {
-        const services = new Services();
+        const client = await createCliClient();
         try {
-          const referenceService = services.get(ReferencesService);
-          const list = await referenceService.listCollections();
+          const list = await client.references.listCollections();
 
           if (list.length === 0) {
             formatInfo('No collections found.');
@@ -53,7 +50,7 @@ const createReferenceCli = (command: Command) => {
 
           console.log();
         } finally {
-          await services.destroy();
+          await client.disconnect();
         }
       }),
     );
@@ -67,10 +64,9 @@ const createReferenceCli = (command: Command) => {
     .option('-f, --force', 'Skip confirmation prompt')
     .action(
       withErrorHandling(async (name: string | undefined, options: { force?: boolean }) => {
-        const services = new Services();
+        const client = await createCliClient();
         try {
-          const referenceService = services.get(ReferencesService);
-          const collections = await referenceService.listCollections();
+          const collections = await client.references.listCollections();
 
           if (collections.length === 0) {
             formatInfo('No collections found.');
@@ -116,10 +112,10 @@ const createReferenceCli = (command: Command) => {
             }
           }
 
-          await referenceService.dropCollection(collectionName);
+          await client.references.dropCollection({ collection: collectionName });
           formatSuccess(`Collection "${collectionName}" dropped successfully.`);
         } finally {
-          await services.destroy();
+          await client.disconnect();
         }
       }),
     );
@@ -129,14 +125,13 @@ const createReferenceCli = (command: Command) => {
     .command('update-collection')
     .alias('update')
     .description('Update a collection from files matching a glob pattern')
-    .requiredOption('-p, --pattern <pattern>', 'Glob pattern to match files (e.g., "**/*.md")')
+    .option('-p, --pattern <pattern>', 'Glob pattern to match files (e.g., "**/*.md")', '**/*.md')
     .option('-c, --collection <name>', 'Collection name (defaults to cwd)')
     .option('-d, --cwd <directory>', 'Working directory for glob pattern', process.cwd())
     .action(
       withErrorHandling(async (options: { pattern: string; collection?: string; cwd: string }) => {
-        const services = new Services();
+        const client = await createCliClient();
         try {
-          const referenceService = services.get(ReferencesService);
           const collectionName = options.collection || options.cwd;
 
           formatHeader('Updating Collection');
@@ -147,7 +142,7 @@ const createReferenceCli = (command: Command) => {
 
           console.log(chalk.dim('Processing files...'));
 
-          await referenceService.updateCollectionFromGlob({
+          await client.references.updateCollection({
             pattern: options.pattern,
             cwd: options.cwd,
             collection: collectionName,
@@ -155,7 +150,7 @@ const createReferenceCli = (command: Command) => {
 
           formatSuccess('Collection updated successfully.');
         } finally {
-          await services.destroy();
+          await client.disconnect();
         }
       }),
     );
@@ -169,10 +164,8 @@ const createReferenceCli = (command: Command) => {
     .option('-l, --limit <number>', 'Maximum number of results', '10')
     .action(
       withErrorHandling(async (query: string, options: { collections?: string[]; limit: string }) => {
-        const services = new Services();
+        const client = await createCliClient();
         try {
-          const referenceService = services.get(ReferencesService);
-
           formatHeader('Search Results');
           formatInfo(`Query: ${chalk.cyan(query)}`);
           if (options.collections) {
@@ -180,7 +173,7 @@ const createReferenceCli = (command: Command) => {
           }
           console.log();
 
-          const results = await referenceService.search({
+          const results = await client.references.search({
             query,
             collections: options.collections,
             limit: parseInt(options.limit, 10),
@@ -197,10 +190,10 @@ const createReferenceCli = (command: Command) => {
 
             console.log(
               chalk.bold.white(`${i + 1}.`) +
-                ' ' +
-                chalk.cyan(result.document) +
-                chalk.dim(' in ') +
-                chalk.magenta(result.collection),
+              ' ' +
+              chalk.cyan(result.document) +
+              chalk.dim(' in ') +
+              chalk.magenta(result.collection),
             );
             console.log(chalk.dim('   Distance: ') + distanceColor(result.distance.toFixed(4)));
             console.log();
@@ -217,7 +210,7 @@ const createReferenceCli = (command: Command) => {
             console.log();
           }
         } finally {
-          await services.destroy();
+          await client.disconnect();
         }
       }),
     );
@@ -229,10 +222,9 @@ const createReferenceCli = (command: Command) => {
     .description('Interactive search mode')
     .action(
       withErrorHandling(async () => {
-        const services = new Services();
+        const client = await createCliClient();
         try {
-          const referenceService = services.get(ReferencesService);
-          const collections = await referenceService.listCollections();
+          const collections = await client.references.listCollections();
 
           if (collections.length === 0) {
             formatInfo('No collections found. Add some documents first.');
@@ -267,7 +259,7 @@ const createReferenceCli = (command: Command) => {
             default: '10',
           });
 
-          const results = await referenceService.search({
+          const results = await client.references.search({
             query,
             collections: selectedCollections ? [selectedCollections] : undefined,
             limit: parseInt(limitStr, 10) || 10,
@@ -288,10 +280,10 @@ const createReferenceCli = (command: Command) => {
 
             console.log(
               chalk.bold.white(`${i + 1}.`) +
-                ' ' +
-                chalk.cyan(result.document) +
-                chalk.dim(' in ') +
-                chalk.magenta(result.collection),
+              ' ' +
+              chalk.cyan(result.document) +
+              chalk.dim(' in ') +
+              chalk.magenta(result.collection),
             );
             console.log(chalk.dim('   Distance: ') + distanceColor(result.distance.toFixed(4)));
             console.log();
@@ -307,7 +299,7 @@ const createReferenceCli = (command: Command) => {
             console.log();
           }
         } finally {
-          await services.destroy();
+          await client.disconnect();
         }
       }),
     );

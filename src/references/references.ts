@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
 
-import { searchChunkItem, type ReferenceDocument, type SearchChunksOptions } from './references.schemas.ts';
+import { searchChunkItemSchema, type ReferenceDocument, type SearchChunksOptions } from './references.schemas.ts';
 
 import type { Services } from '#root/utils/utils.services.ts';
 import { DatabaseService, tableNames } from '#root/database/database.ts';
@@ -118,7 +118,7 @@ class ReferencesService {
     }
 
     const results = await dbQuery;
-    return results.map((row) => searchChunkItem.parse(row));
+    return results.map((row) => searchChunkItemSchema.parse(row));
   };
 
   public getDocument = async (collection: string, id: string): Promise<ReferenceDocument | null> => {

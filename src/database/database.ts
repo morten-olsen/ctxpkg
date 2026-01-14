@@ -1,8 +1,12 @@
+import { mkdirSync, existsSync } from 'node:fs';
+import { dirname } from 'node:path';
+
 import knex, { type Knex } from 'knex';
 import type { Db } from 'sqlite-vec';
 
 import { migrationSource } from './migrations/migrations.ts';
 
+import { config } from '#root/config/config.ts';
 import { destroy } from '#root/utils/utils.services.ts';
 
 class DatabaseService {
@@ -10,10 +14,19 @@ class DatabaseService {
 
   #setup = async () => {
     const sqliteVec = await import('sqlite-vec');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const dbPath = (config as any).get('database.path') as string;
+
+    // Ensure directory exists
+    const dbDir = dirname(dbPath);
+    if (!existsSync(dbDir)) {
+      mkdirSync(dbDir, { recursive: true });
+    }
+
     const db = knex({
       client: 'better-sqlite3',
       connection: {
-        filename: './db.sqlite',
+        filename: dbPath,
       },
       useNullAsDefault: true,
       pool: {

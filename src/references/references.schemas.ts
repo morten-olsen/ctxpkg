@@ -16,12 +16,14 @@ const searchChunksOptionsSchema = z.object({
 
 type SearchChunksOptions = z.infer<typeof searchChunksOptionsSchema>;
 
-const searchChunkItem = z.object({
+const searchChunkItemSchema = z.object({
   document: z.string(),
   collection: z.string(),
   content: z.string(),
   distance: z.number(),
 });
 
-export type { ReferenceDocument, SearchChunksOptions };
-export { referenceDocumentSchema, searchChunksOptionsSchema, searchChunkItem };
+type SearchChunkItem = z.infer<typeof searchChunkItemSchema>;
+
+export type { ReferenceDocument, SearchChunksOptions, SearchChunkItem };
+export { referenceDocumentSchema, searchChunksOptionsSchema, searchChunkItemSchema };

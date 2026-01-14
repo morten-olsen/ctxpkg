@@ -9,11 +9,11 @@ import { createAgent } from '../agent/agent.ts';
 import { fileTools } from '../tools/files/files.ts';
 import { gitTools } from '../tools/git/git.ts';
 import { createReferenceTools } from '../tools/references/references.ts';
-import { Services } from '../utils/utils.services.ts';
+import { BackendClient } from '../client/client.ts';
+import { createCliClient } from '../cli/cli.client.ts';
 
-const createDefaultAgent = async (services?: Services): Promise<{ agent: ReactAgent; services: Services }> => {
-  const svc = services ?? new Services();
-  const referenceTools = createReferenceTools(svc);
+const createDefaultAgent = async (client: BackendClient): Promise<{ agent: ReactAgent }> => {
+  const referenceTools = createReferenceTools(client);
 
   const tools = [...Object.values(fileTools), ...Object.values(gitTools), ...Object.values(referenceTools)];
 
@@ -30,7 +30,7 @@ When asked to create a commit message, analyze the changes first using git diff 
 Always be concise and accurate.`;
 
   const agent = await createAgent(tools, systemPrompt);
-  return { agent, services: svc };
+  return { agent };
 };
 
 const prompt = async (agent: ReactAgent, userInput: string) => {
@@ -69,30 +69,35 @@ const prompt = async (agent: ReactAgent, userInput: string) => {
 };
 
 const startSession = async () => {
-  const { agent, services } = await createDefaultAgent();
-  const rl = readline.createInterface({ input, output });
-
-  console.log('Agent initialized. Type "exit" or "quit" to stop.');
+  const client = await createCliClient();
 
   try {
-    while (true) {
-      const userInput = await rl.question('\nUser: ');
+    const { agent } = await createDefaultAgent(client);
+    const rl = readline.createInterface({ input, output });
 
-      if (userInput.toLowerCase() === 'exit' || userInput.toLowerCase() === 'quit') {
-        break;
+    console.log('Agent initialized. Type "exit" or "quit" to stop.');
+
+    try {
+      while (true) {
+        const userInput = await rl.question('\nUser: ');
+
+        if (userInput.toLowerCase() === 'exit' || userInput.toLowerCase() === 'quit') {
+          break;
+        }
+
+        if (!userInput.trim()) continue;
+
+        try {
+          await prompt(agent, userInput);
+        } catch (error) {
+          console.error('Error:', error);
+        }
       }
-
-      if (!userInput.trim()) continue;
-
-      try {
-        await prompt(agent, userInput);
-      } catch (error) {
-        console.error('Error:', error);
-      }
+    } finally {
+      rl.close();
     }
   } finally {
-    rl.close();
-    await services.destroy();
+    await client.disconnect();
   }
 };
 

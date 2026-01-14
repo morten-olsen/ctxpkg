@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 
 import { createConfigCli } from './cli.config.ts';
+import { createDaemonCli } from './cli.daemon.ts';
 import { createInteractCli } from './cli.interact.ts';
 import { createReferenceCli } from './cli.references.ts';
 
@@ -13,6 +14,7 @@ const createProgram = () => {
   createInteractCli(program.command('chat').description('Chat and prompt commands'));
   createConfigCli(program.command('config').alias('cfg').description('Manage configuration'));
   createReferenceCli(program.command('references').alias('ref').description('Manage reference documents'));
+  createDaemonCli(program.command('daemon').description('Manage the background daemon'));
 
   // Add top-level shortcuts for common commands
   program

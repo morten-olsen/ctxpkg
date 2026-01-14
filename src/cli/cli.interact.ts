@@ -1,6 +1,7 @@
 import type { Command } from 'commander';
 
 import { formatHeader, formatInfo, formatError, withErrorHandling, chalk } from './cli.utils.ts';
+import { createCliClient } from './cli.client.ts';
 
 import { createDefaultAgent, prompt, startSession } from '#root/interact/interact.ts';
 
@@ -34,11 +35,12 @@ const createInteractCli = (command: Command) => {
           return;
         }
 
-        const { agent, services } = await createDefaultAgent();
+        const client = await createCliClient();
         try {
+          const { agent } = await createDefaultAgent(client);
           await prompt(agent, input);
         } finally {
-          await services.destroy();
+          await client.disconnect();
         }
       }),
     );

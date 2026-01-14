@@ -22,6 +22,7 @@
     "@eslint/js": "9.39.2",
     "@pnpm/find-workspace-packages": "6.0.9",
     "@types/node": "25.0.8",
+    "@types/ws": "^8.18.1",
     "@vitest/coverage-v8": "4.0.17",
     "eslint": "9.39.2",
     "eslint-config-prettier": "10.1.8",
@@ -58,6 +59,7 @@
     "langchain": "^1.2.8",
     "simple-git": "^3.30.0",
     "sqlite-vec": "0.1.7-alpha.2",
+    "ws": "^8.19.0",
     "zod": "3"
   },
   "pnpm": {

@@ -1,18 +1,16 @@
 import { tool } from 'langchain';
 import * as z from 'zod';
 
-import { ReferencesService } from '#root/references/references.ts';
-import type { Services } from '#root/utils/utils.services.ts';
+import type { BackendClient } from '#root/client/client.ts';
 
 /**
- * Creates reference document tools that use the provided Services container.
+ * Creates reference document tools that use the provided BackendClient.
  * These tools provide read-only access to the semantic index.
  */
-const createReferenceTools = (services: Services) => {
+const createReferenceTools = (client: BackendClient) => {
   const listCollections = tool(
     async () => {
-      const referenceService = services.get(ReferencesService);
-      const collections = await referenceService.listCollections();
+      const collections = await client.references.listCollections();
 
       if (collections.length === 0) {
         return 'No reference collections found.';
@@ -37,8 +35,7 @@ const createReferenceTools = (services: Services) => {
 
   const searchReferences = tool(
     async ({ query, collections, limit }) => {
-      const referenceService = services.get(ReferencesService);
-      const results = await referenceService.search({
+      const results = await client.references.search({
         query,
         collections,
         limit: limit ?? 10,
@@ -76,8 +73,7 @@ const createReferenceTools = (services: Services) => {
 
   const getDocument = tool(
     async ({ collection, document }) => {
-      const referenceService = services.get(ReferencesService);
-      const result = await referenceService.getDocument(collection, document);
+      const result = await client.references.getDocument({ collection, id: document });
 
       if (!result) {
         return `Document "${document}" not found in collection "${collection}".`;
