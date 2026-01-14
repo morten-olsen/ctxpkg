@@ -167,98 +167,127 @@ const createReferenceCli = (command: Command) => {
   // Search command
   command
     .command('search')
-    .description('Search for documents in reference collections')
+    .description('Search for documents in reference collections using hybrid semantic + keyword search')
     .argument('<query>', 'Search query')
     .option('-c, --collections <names...>', 'Limit search to specific collections (can be aliases from context.json)')
     .option('-l, --limit <number>', 'Maximum number of results', '10')
     .option('--no-default', 'Do not include default collections in search')
+    .option('--max-distance <number>', 'Maximum distance threshold (0-2, lower = stricter)')
+    .option('--no-hybrid', 'Disable hybrid search (use pure vector search)')
+    .option('--rerank', 'Enable re-ranking for higher precision (slower)')
     .action(
-      withErrorHandling(async (query: string, options: { collections?: string[]; limit: string; default: boolean }) => {
-        const services = new Services();
-        const client = await createCliClient();
-        try {
-          const collectionsService = services.get(CollectionsService);
+      withErrorHandling(
+        async (
+          query: string,
+          options: {
+            collections?: string[];
+            limit: string;
+            default: boolean;
+            maxDistance?: string;
+            hybrid: boolean;
+            rerank?: boolean;
+          },
+        ) => {
+          const services = new Services();
+          const client = await createCliClient();
+          try {
+            const collectionsService = services.get(CollectionsService);
 
-          // Helper to resolve alias to collection ID
-          const resolveCollection = (name: string): string => {
-            // Try to resolve as alias from project config
-            const spec = collectionsService.getFromProjectConfig(name);
-            if (spec) {
-              return collectionsService.computeCollectionId(spec);
-            }
-            // Return as-is (might be a raw collection ID or path)
-            return name;
-          };
-
-          // Merge specified collections with default collections and cwd (unless --no-default is set)
-          const defaultCollections = config.get('references.defaultCollections') as string[];
-          let collectionsToSearch: string[] | undefined;
-
-          if (options.collections || options.default) {
-            const collectionsSet = new Set<string>();
-            if (options.default) {
-              // Always include cwd as a default collection
-              collectionsSet.add(process.cwd());
-              for (const c of defaultCollections) {
-                collectionsSet.add(resolveCollection(c));
+            // Helper to resolve alias to collection ID
+            const resolveCollection = (name: string): string => {
+              // Try to resolve as alias from project config
+              const spec = collectionsService.getFromProjectConfig(name);
+              if (spec) {
+                return collectionsService.computeCollectionId(spec);
               }
-            }
-            if (options.collections) {
-              for (const c of options.collections) {
-                collectionsSet.add(resolveCollection(c));
+              // Return as-is (might be a raw collection ID or path)
+              return name;
+            };
+
+            // Merge specified collections with default collections and cwd (unless --no-default is set)
+            const defaultCollections = config.get('references.defaultCollections') as string[];
+            let collectionsToSearch: string[] | undefined;
+
+            if (options.collections || options.default) {
+              const collectionsSet = new Set<string>();
+              if (options.default) {
+                // Always include cwd as a default collection
+                collectionsSet.add(process.cwd());
+                for (const c of defaultCollections) {
+                  collectionsSet.add(resolveCollection(c));
+                }
               }
+              if (options.collections) {
+                for (const c of options.collections) {
+                  collectionsSet.add(resolveCollection(c));
+                }
+              }
+              collectionsToSearch = collectionsSet.size > 0 ? [...collectionsSet] : undefined;
             }
-            collectionsToSearch = collectionsSet.size > 0 ? [...collectionsSet] : undefined;
-          }
 
-          formatHeader('Search Results');
-          formatInfo(`Query: ${chalk.cyan(query)}`);
-          if (collectionsToSearch) {
-            formatInfo(`Collections: ${chalk.cyan(collectionsToSearch.join(', '))}`);
-          }
-          console.log();
-
-          const results = await client.references.search({
-            query,
-            collections: collectionsToSearch,
-            limit: parseInt(options.limit, 10),
-          });
-
-          if (results.length === 0) {
-            formatInfo('No results found.');
-            return;
-          }
-
-          for (let i = 0; i < results.length; i++) {
-            const result = results[i];
-            const distanceColor = result.distance < 0.5 ? chalk.green : result.distance < 1 ? chalk.yellow : chalk.red;
-
-            console.log(
-              chalk.bold.white(`${i + 1}.`) +
-                ' ' +
-                chalk.cyan(result.document) +
-                chalk.dim(' in ') +
-                chalk.magenta(result.collection),
-            );
-            console.log(chalk.dim('   Distance: ') + distanceColor(result.distance.toFixed(4)));
+            formatHeader('Search Results');
+            formatInfo(`Query: ${chalk.cyan(query)}`);
+            if (collectionsToSearch) {
+              formatInfo(`Collections: ${chalk.cyan(collectionsToSearch.join(', '))}`);
+            }
+            if (!options.hybrid) {
+              formatInfo(`Mode: ${chalk.cyan('vector-only (hybrid disabled)')}`);
+            }
+            if (options.rerank) {
+              formatInfo(`Re-ranking: ${chalk.cyan('enabled')}`);
+            }
             console.log();
 
-            // Format content with indentation and truncation
-            const contentLines = result.content.split('\n').slice(0, 6);
-            for (const line of contentLines) {
-              const truncated = line.length > 100 ? line.slice(0, 97) + '...' : line;
-              console.log(chalk.dim('   │ ') + chalk.white(truncated));
+            const results = await client.references.search({
+              query,
+              collections: collectionsToSearch,
+              limit: parseInt(options.limit, 10),
+              maxDistance: options.maxDistance ? parseFloat(options.maxDistance) : undefined,
+              hybridSearch: options.hybrid,
+              rerank: options.rerank,
+            });
+
+            if (results.length === 0) {
+              formatInfo('No results found.');
+              return;
             }
-            if (result.content.split('\n').length > 6) {
-              console.log(chalk.dim('   │ ...'));
+
+            for (let i = 0; i < results.length; i++) {
+              const result = results[i];
+              const distanceColor =
+                result.distance < 0.5 ? chalk.green : result.distance < 1 ? chalk.yellow : chalk.red;
+
+              console.log(
+                chalk.bold.white(`${i + 1}.`) +
+                  ' ' +
+                  chalk.cyan(result.document) +
+                  chalk.dim(' in ') +
+                  chalk.magenta(result.collection),
+              );
+              const scoreInfo =
+                result.score !== undefined
+                  ? chalk.dim('   Score: ') + chalk.green(result.score.toFixed(4)) + chalk.dim(' | ')
+                  : chalk.dim('   ');
+              console.log(scoreInfo + chalk.dim('Distance: ') + distanceColor(result.distance.toFixed(4)));
+              console.log();
+
+              // Format content with indentation and truncation
+              const contentLines = result.content.split('\n').slice(0, 6);
+              for (const line of contentLines) {
+                const truncated = line.length > 100 ? line.slice(0, 97) + '...' : line;
+                console.log(chalk.dim('   │ ') + chalk.white(truncated));
+              }
+              if (result.content.split('\n').length > 6) {
+                console.log(chalk.dim('   │ ...'));
+              }
+              console.log();
             }
-            console.log();
+          } finally {
+            await client.disconnect();
+            await services.destroy();
           }
-        } finally {
-          await client.disconnect();
-          await services.destroy();
-        }
-      }),
+        },
+      ),
     );
 
   // Interactive search command
@@ -363,7 +392,11 @@ const createReferenceCli = (command: Command) => {
                 chalk.dim(' in ') +
                 chalk.magenta(result.collection),
             );
-            console.log(chalk.dim('   Distance: ') + distanceColor(result.distance.toFixed(4)));
+            const scoreInfo =
+              result.score !== undefined
+                ? chalk.dim('   Score: ') + chalk.green(result.score.toFixed(4)) + chalk.dim(' | ')
+                : chalk.dim('   ');
+            console.log(scoreInfo + chalk.dim('Distance: ') + distanceColor(result.distance.toFixed(4)));
             console.log();
 
             const contentLines = result.content.split('\n').slice(0, 6);

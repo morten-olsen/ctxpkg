@@ -83,7 +83,7 @@ const createReferenceToolDefinitions = (options: ReferenceToolOptions): ToolDefi
   const searchReferences = defineTool({
     name: 'references_search',
     description:
-      'Search reference documents using semantic similarity. Returns the most relevant document chunks for the given query. Use this to find information in documentation, guides, or other indexed reference materials.',
+      'Search reference documents using semantic similarity and keyword matching (hybrid search). Returns the most relevant document chunks for the given query. Use this to find information in documentation, guides, or other indexed reference materials.',
     schema: z.object({
       query: z.string().describe('The search query - describe what information you are looking for'),
       collections: z
@@ -92,9 +92,27 @@ const createReferenceToolDefinitions = (options: ReferenceToolOptions): ToolDefi
         .describe(
           'Optional list of collection names or aliases to search in. If not provided, searches all collections.',
         ),
-      limit: z.number().optional().default(10).describe('Maximum number of results to return (default: 10)'),
+      limit: z.number().optional().describe('Maximum number of results to return (default: 10)'),
+      maxDistance: z
+        .number()
+        .optional()
+        .describe(
+          'Maximum distance threshold (0-2 for cosine). Results with distance greater than this are filtered out. Lower values = stricter matching.',
+        ),
+      hybridSearch: z
+        .boolean()
+        .optional()
+        .describe(
+          'Whether to combine vector similarity with keyword matching (default: true). Disable for pure semantic search.',
+        ),
+      rerank: z
+        .boolean()
+        .optional()
+        .describe(
+          'Whether to re-rank results using a secondary model for higher precision (default: false). Slower but more accurate.',
+        ),
     }),
-    handler: async ({ query, collections, limit }) => {
+    handler: async ({ query, collections, limit, maxDistance, hybridSearch, rerank }) => {
       // Resolve any aliases to collection IDs
       const resolvedCollections = resolveCollections(collections, aliasMap);
 
@@ -102,6 +120,9 @@ const createReferenceToolDefinitions = (options: ReferenceToolOptions): ToolDefi
         query,
         collections: resolvedCollections,
         limit: limit ?? 10,
+        maxDistance,
+        hybridSearch,
+        rerank,
       });
 
       if (results.length === 0) {
@@ -115,7 +136,8 @@ const createReferenceToolDefinitions = (options: ReferenceToolOptions): ToolDefi
           collectionId: alias ? r.collection : undefined,
           documentId: r.document,
           content: r.content,
-          relevanceScore: 1 - r.distance, // Convert distance to similarity score
+          relevanceScore: r.score ?? 1 - r.distance, // Use score if available, else convert distance
+          distance: r.distance,
         };
       });
     },
