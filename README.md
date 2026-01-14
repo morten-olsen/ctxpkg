@@ -22,9 +22,6 @@ cd ctxpkg
 # Install dependencies
 pnpm install
 
-# Build
-pnpm run build
-
 # Make globally accessible
 npm link
 ```
@@ -221,16 +218,16 @@ Or with explicit file list and hashes:
 
 ## Command Aliases
 
-| Full Command | Alias |
-|--------------|-------|
-| `collections` | `col` |
-| `collections list` | `col ls` |
-| `references` | `ref` |
-| `references list-collections` | `ref ls` |
-| `references drop-collection` | `ref drop` |
+| Full Command                    | Alias         |
+| ------------------------------- | ------------- |
+| `collections`                   | `col`         |
+| `collections list`              | `col ls`      |
+| `references`                    | `ref`         |
+| `references list-collections`   | `ref ls`      |
+| `references drop-collection`    | `ref drop`    |
 | `references interactive-search` | `ref isearch` |
-| `config` | `cfg` |
-| `mcp references` | `mcp ref` |
+| `config`                        | `cfg`         |
+| `mcp references`                | `mcp ref`     |
 
 ## How It Works
 

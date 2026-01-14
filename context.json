@@ -4,10 +4,6 @@
       "type": "file",
       "path": ".",
       "glob": "**/*.md"
-    },
-    "recalc": {
-      "type": "pkg",
-      "url": "file://../../../zeronorth/shorts/tmp-recalculate-vessel-reports/manifest.json"
     }
   }
 }
