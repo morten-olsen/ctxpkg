@@ -1,15 +1,25 @@
 # ctxpkg
 
+> **The Vision:** Imagine an AI assistant that actually knows your context. Not just your code, but your team's commit style, your company's security policies, and your personal preferred patterns.  
+> [📖 Read the North Star story: **Context Stacking: How Sarah Automated Her Team's Brain**](docs/managing-ai-context-at-scale.md)
+
 A package manager for AI agent context — manage, sync, and distribute reference documentation collections for AI-assisted development workflows.
 
 ## Overview
 
-`ctxpkg` helps you manage contextual documentation that AI agents can use to understand your codebase, frameworks, and organizational standards. Think of it as "npm for AI context":
+`ctxpkg` is a package manager for AI context. It allows you to stack documentation layers—from personal notes to team guidelines and corporate standards—into a unified knowledge base for your AI agents.
 
-- **Package collections**: Install from local or remote manifests/bundles
-- **Versioning**: Pin to specific versions via URL
-- **Sharing**: Create distributable packages for your team or the community
-- **Semantic search**: Query indexed documents with natural language
+Just as `npm` manages code dependencies, `ctxpkg` manages **context dependencies**.
+
+**Key Features:**
+
+- **Context Stacking**: Layer context from multiple sources:
+  - **Global**: Personal notes, "second brain" (Obsidian), public library docs.
+  - **Team**: Shared "Ways of Working", commit conventions, architecture decision records.
+  - **Project**: Local `docs/` folder, specific framework versions.
+- **Distribution**: Share context packages via Git, HTTP, or GitHub Releases.
+- **Semantic Search**: High-performance local vector search (embedding + keyword) allows agents to find exactly what they need without dumping thousands of lines into the prompt.
+- **MCP Native**: Exposes a Model Context Protocol (MCP) server so Cursor, Windsurf, and other AI tools can query your context stack directly.
 
 ## Installation
 
@@ -250,16 +260,16 @@ Or with explicit file list and hashes:
 
 ## Command Aliases
 
-| Full Command                    | Alias         |
-| ------------------------------- | ------------- |
-| `collections`                   | `col`         |
-| `collections list`              | `col ls`      |
-| `documents`                    | `docs`        |
-| `documents list-collections`   | `docs ls`     |
-| `documents drop-collection`    | `docs drop`   |
-| `documents interactive-search` | `docs isearch`|
-| `config`                        | `cfg`         |
-| `mcp documents`                 | `mcp docs`    |
+| Full Command                   | Alias          |
+| ------------------------------ | -------------- |
+| `collections`                  | `col`          |
+| `collections list`             | `col ls`       |
+| `documents`                    | `docs`         |
+| `documents list-collections`   | `docs ls`      |
+| `documents drop-collection`    | `docs drop`    |
+| `documents interactive-search` | `docs isearch` |
+| `config`                       | `cfg`          |
+| `mcp documents`                | `mcp docs`     |
 
 ## How It Works
 
@@ -327,10 +337,10 @@ Query → Query Embedding → Hybrid Search → Rank Fusion → (Optional Re-ran
 
 Queries run against both indexes simultaneously:
 
-| Method | What it finds |
-|--------|---------------|
-| Vector search | Semantically similar content (cosine distance) |
-| Keyword search | Exact term matches (FTS5 BM25) |
+| Method         | What it finds                                  |
+| -------------- | ---------------------------------------------- |
+| Vector search  | Semantically similar content (cosine distance) |
+| Keyword search | Exact term matches (FTS5 BM25)                 |
 
 **2. Reciprocal Rank Fusion (RRF)**
 
@@ -369,10 +379,10 @@ ctxpkg ref search "query" --rerank
    Score: 0.0327 | Distance: 0.4521
 ```
 
-| Metric | Meaning |
-|--------|---------|
+| Metric       | Meaning                                                                         |
+| ------------ | ------------------------------------------------------------------------------- |
 | **Distance** | Cosine distance (0 = identical, 2 = opposite). < 0.5 is good, < 1.0 is relevant |
-| **Score** | Combined ranking score from hybrid search (higher = better) |
+| **Score**    | Combined ranking score from hybrid search (higher = better)                     |
 
 ## Development
 
