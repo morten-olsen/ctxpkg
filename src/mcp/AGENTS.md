@@ -4,7 +4,7 @@ This document describes the MCP module architecture for AI agents working on thi
 
 ## Overview
 
-The MCP module provides [Model Context Protocol](https://modelcontextprotocol.io/) server integration. It creates MCP servers that expose ctxpkg's reference tools to AI editors like Cursor, Claude Desktop, and other MCP-compatible clients. The server communicates over stdio transport.
+The MCP module provides [Model Context Protocol](https://modelcontextprotocol.io/) server integration. It creates MCP servers that expose ctxpkg's document tools to AI editors like Cursor, Claude Desktop, and other MCP-compatible clients. The server communicates over stdio transport.
 
 ## File Structure
 
@@ -33,10 +33,10 @@ The MCP module provides [Model Context Protocol](https://modelcontextprotocol.io
 │  └───────────────────────────────────────────────────────┘  │
 │                           │                                 │
 │  ┌───────────────────────▼───────────────────────────────┐  │
-│  │              Reference Tools                          │  │
-│  │  • references_list_collections                        │  │
-│  │  • references_search                                  │  │
-│  │  • references_get_document                            │  │
+│  │              Document Tools                           │  │
+│  │  • documents_list_collections                         │  │
+│  │  • documents_search                                   │  │
+│  │  • documents_get_document                             │  │
 │  └───────────────────────────────────────────────────────┘  │
 │                           │                                 │
 │  ┌───────────────────────▼───────────────────────────────┐  │
@@ -54,24 +54,24 @@ Via CLI:
 
 ```bash
 # Start with all collections
-ctxpkg mcp references
+ctxpkg mcp documents
 
 # Limit to specific collections
-ctxpkg mcp references -c my-docs langchain-docs
+ctxpkg mcp documents -c my-docs langchain-docs
 
 # Custom server name/version
-ctxpkg mcp references --name my-server --version 2.0.0
+ctxpkg mcp documents --name my-server --version 2.0.0
 ```
 
 ### Programmatic Usage
 
 ```typescript
-import { createReferencesMcpServer, runMcpServer } from '#root/mcp/mcp.ts';
+import { createDocumentsMcpServer, runMcpServer } from '#root/mcp/mcp.ts';
 import { createClient } from '#root/client/client.ts';
 
 const client = await createClient({ mode: 'daemon' });
 
-const server = createReferencesMcpServer({
+const server = createDocumentsMcpServer({
   client,
   name: 'my-mcp-server',
   version: '1.0.0',
@@ -92,7 +92,7 @@ Add to `.cursor/mcp.json`:
   "mcpServers": {
     "ctxpkg": {
       "command": "ctxpkg",
-      "args": ["mcp", "references"]
+      "args": ["mcp", "documents"]
     }
   }
 }
@@ -107,7 +107,7 @@ Add to Claude Desktop config:
   "mcpServers": {
     "ctxpkg": {
       "command": "ctxpkg",
-      "args": ["mcp", "references"]
+      "args": ["mcp", "documents"]
     }
   }
 }
@@ -119,22 +119,22 @@ The MCP server exposes these tools to AI agents:
 
 | Tool | Description |
 |------|-------------|
-| `references_list_collections` | List available reference collections |
-| `references_search` | Semantic search across documents |
-| `references_get_document` | Get full document content |
+| `documents_list_collections` | List available document collections |
+| `documents_search` | Semantic search across documents |
+| `documents_get_document` | Get full document content |
 
-See `src/tools/references/` for tool implementation details.
+See `src/tools/documents/` for tool implementation details.
 
 ## Key Components
 
-### `createReferencesMcpServer(options)`
+### `createDocumentsMcpServer(options)`
 
-Creates an MCP server instance with reference tools:
+Creates an MCP server instance with document tools:
 
 ```typescript
-type ReferencesMcpServerOptions = {
+type DocumentsMcpServerOptions = {
   client: BackendClient;      // Required: backend connection
-  name?: string;              // Server name (default: 'ctxpkg-references')
+  name?: string;              // Server name (default: 'ctxpkg-documents')
   version?: string;           // Server version (default: '1.0.0')
   collections?: string[];     // Limit to specific collections
   aliasMap?: Map<string, string>;  // Project alias → collection ID

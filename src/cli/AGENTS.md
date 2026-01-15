@@ -14,7 +14,7 @@ The CLI module provides the `ctxpkg` command-line interface using [Commander.js]
 | `cli.utils.ts` | Shared formatting utilities and error handling |
 | `cli.client.ts` | Factory for creating `BackendClient` with auto mode detection |
 | `cli.collections.ts` | Collection management commands (`init`, `add`, `sync`, etc.) |
-| `cli.references.ts` | Reference document commands (`search`, `list-collections`, etc.) |
+| `cli.documents.ts` | Document commands (`search`, `list-collections`, etc.) |
 | `cli.config.ts` | Configuration commands (`set`, `get`, `list`, `edit`) |
 | `cli.daemon.ts` | Daemon management commands (`start`, `stop`, `status`) |
 | `cli.mcp.ts` | MCP server commands |
@@ -26,7 +26,7 @@ The CLI module provides the `ctxpkg` command-line interface using [Commander.js]
 │                     createProgram()                         │
 │                         cli.ts                              │
 ├─────────────────────────────────────────────────────────────┤
-│   collections    references    config    daemon    mcp      │
+│   collections    documents     config    daemon    mcp      │
 │   ───────────    ──────────    ──────    ──────    ───      │
 │   init           search        set       start     start    │
 │   add            list-cols     get       stop               │
@@ -54,7 +54,7 @@ ctxpkg <group> <command> [args] [options]
 
 # Examples:
 ctxpkg collections add my-docs ./docs
-ctxpkg references search "how to authenticate"
+ctxpkg documents search "how to authenticate"
 ctxpkg config set openai.apiKey sk-...
 ctxpkg daemon status
 ```
@@ -157,7 +157,7 @@ Use `createCliClient()` from `cli.client.ts`:
 ```typescript
 const client = await createCliClient();
 try {
-  const results = await client.references.search({ query: 'foo' });
+  const results = await client.documents.search({ query: 'foo' });
   // ...
 } finally {
   await client.disconnect();
@@ -204,10 +204,10 @@ const choice = await select({
 ```bash
 # Run directly during development
 ./bin/cli.js collections list
-./bin/cli.js references search "query"
+./bin/cli.js documents search "query"
 ./bin/cli.js config list
 
 # With options
 ./bin/cli.js collections sync --force
-./bin/cli.js references search "query" --limit 5
+./bin/cli.js documents search "query" --limit 5
 ```

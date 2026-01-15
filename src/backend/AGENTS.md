@@ -32,7 +32,7 @@ The backend service is a JSON-RPC 2.0 inspired request handler that provides the
 │  ┌────────▼────────────────────────────────────────────┐    │
 │  │              BackendServices                        │    │
 │  │  ┌────────────┐ ┌─────────────┐ ┌────────────────┐  │    │
-│  │  │ references │ │ collections │ │     system     │  │    │
+│  │  │  documents │ │ collections │ │     system     │  │    │
 │  │  └────────────┘ └─────────────┘ └────────────────┘  │    │
 │  └─────────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────────┘
@@ -100,7 +100,7 @@ procedure(
 Services are accessed via the dependency injection container:
 
 ```typescript
-const refService = services.get(ReferencesService);
+const docService = services.get(DocumentsService);
 ```
 
 ### Method Routing

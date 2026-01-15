@@ -4,7 +4,7 @@ import {
   referenceDocumentSchema,
   searchChunksOptionsSchema,
   searchChunkItemSchema,
-} from '#root/references/references.schemas.ts';
+} from '#root/documents/documents.schemas.ts';
 
 // Collection info schema
 const collectionInfoSchema = z.object({

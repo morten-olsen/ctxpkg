@@ -24,8 +24,8 @@ src/
 ├── database/        # SQLite database with migrations
 ├── embedder/        # Text embedding service
 ├── mcp/             # MCP server creation and management
-├── references/      # Reference document management
-├── tools/           # MCP tools (references)
+├── documents/       # Document management
+├── tools/           # MCP tools (documents)
 └── utils/           # Shared utilities (service container)
 
 bin/
@@ -72,14 +72,14 @@ The heart of the application — package manager for AI context.
 3. Update collection metadata in database
 ```
 
-### References (`src/references/`)
+### Documents (`src/documents/`)
 
 Document storage and semantic search:
 
 - Documents organized into collections (keyed by collection ID)
-- Content chunked using `RecursiveCharacterTextSplitter`
+- Content chunked using `TokenTextSplitter`
 - Chunks embedded and stored with vectors
-- Search uses L2 distance for similarity
+- Search uses hybrid vector + keyword matching
 
 **Key Methods:**
 - `updateDocument()` - Index a document (chunk, embed, store)
@@ -99,7 +99,7 @@ Protocol-agnostic service layer that can run in-process or as a daemon.
 - `backend.schemas.ts` - Zod schemas for validation
 
 **Services:**
-- `references` - Document search and management
+- `documents` - Document search and management
 - `collections` - Collection sync and status
 - `system` - Ping, status, shutdown
 
@@ -120,7 +120,7 @@ const client = new BackendClient({ mode: 'direct' });
 await client.connect();
 
 // Type-safe API calls
-const results = await client.references.search({ query: 'hello', limit: 10 });
+const results = await client.documents.search({ query: 'hello', limit: 10 });
 await client.collections.sync({ name: 'docs', spec: {...}, cwd: '/path' });
 
 await client.disconnect();
@@ -162,14 +162,14 @@ Local text embedding using HuggingFace Transformers:
 Model Context Protocol server for AI tool integration.
 
 **Tools Exposed:**
-- `references_list_collections` - List available collections
-- `references_search` - Semantic search
-- `references_get_document` - Retrieve full document
+- `documents_list_collections` - List available collections
+- `documents_search` - Semantic search
+- `documents_get_document` - Retrieve full document
 
 **Usage:**
 ```bash
-ctxpkg mcp references
-ctxpkg mcp ref -c my-docs
+ctxpkg mcp documents
+ctxpkg mcp docs -c my-docs
 ```
 
 ### CLI (`src/cli/`)
@@ -180,7 +180,7 @@ Commander.js-based CLI split into modules:
 |------|---------|
 | `cli.ts` | Main entry, mounts subcommands |
 | `cli.collections.ts` | Collection package management |
-| `cli.references.ts` | Reference document queries |
+| `cli.documents.ts` | Document queries |
 | `cli.config.ts` | Config management commands |
 | `cli.daemon.ts` | Daemon management commands |
 | `cli.mcp.ts` | MCP server commands |
@@ -215,7 +215,7 @@ CollectionsService.syncCollection()
     ↓
 Compare with existing documents
     ↓
-Add/Update/Remove via ReferencesService
+Add/Update/Remove via DocumentsService
     ↓
 Update collection metadata
 ```
@@ -262,7 +262,7 @@ Uses `convict` for configuration:
 {
   database: { path: '~/.local/share/ai-assist/database.sqlite' },
   daemon: { socketPath, pidFile, idleTimeout, autoStart },
-  references: { defaultCollections: [] },
+  documents: { defaultCollections: [] },
   project: { configFile: 'context.json' }
 }
 ```

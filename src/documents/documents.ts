@@ -10,7 +10,7 @@ import {
   type ReferenceDocument,
   type SearchChunksOptions,
   type SearchChunkItem,
-} from './references.schemas.ts';
+} from './documents.schemas.ts';
 
 import type { Services } from '#root/utils/utils.services.ts';
 import { DatabaseService, tableNames } from '#root/database/database.ts';
@@ -24,7 +24,7 @@ const CHUNK_OVERLAP = 80;
 const RRF_K = 60; // Reciprocal Rank Fusion constant
 const RERANK_CANDIDATES_MULTIPLIER = 3; // Fetch 3x candidates for re-ranking
 
-class ReferencesService {
+class DocumentsService {
   #services: Services;
   #reranker?: Promise<FeatureExtractionPipeline>;
 
@@ -454,4 +454,4 @@ class ReferencesService {
   };
 }
 
-export { ReferencesService };
+export { DocumentsService };

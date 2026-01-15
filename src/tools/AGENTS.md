@@ -13,8 +13,8 @@ src/tools/
 ├── tools.types.ts       # Common tool definition types
 ├── tools.mcp.ts         # MCP server adapter
 ├── tools.langchain.ts   # LangChain adapter
-├── references/
-│   └── references.ts    # Reference document tools
+├── documents/
+│   └── documents.ts     # Document tools
 ├── files/
 │   └── files.ts         # File system tools (legacy)
 └── git/
@@ -87,10 +87,10 @@ const myTool = defineTool({
 ```typescript
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { registerMcpTools } from '#root/tools/tools.mcp.ts';
-import { createReferenceToolDefinitions } from '#root/tools/references/references.ts';
+import { createDocumentToolDefinitions } from '#root/tools/documents/documents.ts';
 
 const server = new McpServer({ name: 'my-server', version: '1.0.0' });
-const tools = createReferenceToolDefinitions({ client });
+const tools = createDocumentToolDefinitions({ client });
 
 registerMcpTools(server, tools);
 ```
@@ -99,9 +99,9 @@ registerMcpTools(server, tools);
 
 ```typescript
 import { toLangchainTools } from '#root/tools/tools.langchain.ts';
-import { createReferenceToolDefinitions } from '#root/tools/references/references.ts';
+import { createDocumentToolDefinitions } from '#root/tools/documents/documents.ts';
 
-const definitions = createReferenceToolDefinitions({ client });
+const definitions = createDocumentToolDefinitions({ client });
 const langchainTools = toLangchainTools(definitions);
 
 // Use with LangChain agent
@@ -157,13 +157,13 @@ registerMcpTools(server, tools);
 
 ## Tool Categories
 
-### Reference Tools (`references/`)
+### Document Tools (`documents/`)
 
 Tools for searching and retrieving indexed documentation:
 
-- `references_list_collections` — List available collections
-- `references_search` — Semantic search across documents
-- `references_get_document` — Get full document content
+- `documents_list_collections` — List available collections
+- `documents_search` — Semantic search across documents
+- `documents_get_document` — Get full document content
 
 ### File Tools (`files/`) — Legacy
 
@@ -186,9 +186,9 @@ Git repository tools (LangChain format):
 
 ### Naming
 
-- Use category prefix: `references_`, `files_`, `git_`
-- Use snake_case: `references_list_collections`
-- Be descriptive: `search` → `references_search`
+- Use category prefix: `documents_`, `files_`, `git_`
+- Use snake_case: `documents_list_collections`
+- Be descriptive: `search` → `documents_search`
 
 ### Descriptions
 

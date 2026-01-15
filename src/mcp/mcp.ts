@@ -2,7 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 
 import type { BackendClient } from '#root/client/client.ts';
-import { createReferenceToolDefinitions } from '#root/tools/references/references.ts';
+import { createDocumentToolDefinitions } from '#root/tools/documents/documents.ts';
 import { registerMcpTools } from '#root/tools/tools.mcp.ts';
 
 type McpServerOptions = {
@@ -12,8 +12,8 @@ type McpServerOptions = {
   version?: string;
 };
 
-type ReferencesMcpServerOptions = McpServerOptions & {
-  /** Backend client for accessing the references service */
+type DocumentsMcpServerOptions = McpServerOptions & {
+  /** Backend client for accessing the documents service */
   client: BackendClient;
   /** Collections to limit searches to (optional, uses cwd and default collections if not specified) */
   collections?: string[];
@@ -22,19 +22,19 @@ type ReferencesMcpServerOptions = McpServerOptions & {
 };
 
 /**
- * Create an MCP server with reference document tools.
+ * Create an MCP server with document tools.
  */
-const createReferencesMcpServer = (options: ReferencesMcpServerOptions) => {
-  const { client, aliasMap, name = 'ctxpkg-references', version = '1.0.0' } = options;
+const createDocumentsMcpServer = (options: DocumentsMcpServerOptions) => {
+  const { client, aliasMap, name = 'ctxpkg-documents', version = '1.0.0' } = options;
 
   const server = new McpServer({
     name,
     version,
   });
 
-  // Create and register reference tools
-  const referenceTools = createReferenceToolDefinitions({ client, aliasMap });
-  registerMcpTools(server, referenceTools);
+  // Create and register document tools
+  const documentTools = createDocumentToolDefinitions({ client, aliasMap });
+  registerMcpTools(server, documentTools);
 
   return server;
 };
@@ -59,5 +59,5 @@ const runMcpServer = async (server: McpServer) => {
   });
 };
 
-export { createReferencesMcpServer, runMcpServer };
-export type { McpServerOptions, ReferencesMcpServerOptions };
+export { createDocumentsMcpServer, runMcpServer };
+export type { McpServerOptions, DocumentsMcpServerOptions };

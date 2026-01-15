@@ -1,7 +1,7 @@
 import type { Command } from 'commander';
 
 import { config } from '../config/config.ts';
-import { createReferencesMcpServer, runMcpServer } from '../mcp/mcp.ts';
+import { createDocumentsMcpServer, runMcpServer } from '../mcp/mcp.ts';
 
 import { createCliClient } from './cli.client.ts';
 import { withErrorHandling } from './cli.utils.ts';
@@ -12,14 +12,14 @@ import { Services } from '#root/utils/utils.services.ts';
 const createMcpCli = (command: Command) => {
   command.description('Start MCP servers for tool integration');
 
-  // References MCP server command
+  // Documents MCP server command
   command
-    .command('references')
-    .alias('ref')
-    .description('Start an MCP server with reference document tools')
+    .command('documents')
+    .alias('docs')
+    .description('Start an MCP server with document tools')
     .option('-c, --collections <names...>', 'Limit searches to specific collections')
     .option('--no-default', 'Do not include default collections')
-    .option('--name <name>', 'MCP server name', 'ctxpkg-references')
+    .option('--name <name>', 'MCP server name', 'ctxpkg-documents')
     .option('--version <version>', 'MCP server version', '1.0.0')
     .action(
       withErrorHandling(
@@ -44,9 +44,9 @@ const createMcpCli = (command: Command) => {
             await services.destroy();
           }
 
-          // Build collections list similar to cli.references.ts search command
+          // Build collections list similar to cli.documents.ts search command
           let collectionsToUse: string[] | undefined;
-          const defaultCollections = config.get('references.defaultCollections') as string[];
+          const defaultCollections = config.get('documents.defaultCollections') as string[];
 
           if (options.collections || options.default) {
             const collectionsSet = new Set<string>();
@@ -69,7 +69,7 @@ const createMcpCli = (command: Command) => {
           }
 
           // Create and run MCP server
-          const server = createReferencesMcpServer({
+          const server = createDocumentsMcpServer({
             client,
             aliasMap,
             collections: collectionsToUse,

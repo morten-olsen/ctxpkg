@@ -78,8 +78,8 @@ Sources can be `{ glob: [...] }` (local only) or `{ files: [...] }`.
                               │
                               ▼
                     ┌─────────────────┐
-                    │ ReferencesService│  (stores documents)
-                    └─────────────────┘
+                    │ DocumentsService │  (stores documents)
+                    └──────────────────┘
 ```
 
 ## Sync Flow

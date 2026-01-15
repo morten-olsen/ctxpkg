@@ -28,7 +28,7 @@ import {
 
 import type { Services } from '#root/utils/utils.services.ts';
 import { DatabaseService, tableNames } from '#root/database/database.ts';
-import { ReferencesService } from '#root/references/references.ts';
+import { DocumentsService } from '#root/documents/documents.ts';
 import { config } from '#root/config/config.ts';
 
 /**
@@ -589,8 +589,8 @@ class CollectionsService {
       const entries = await this.resolveManifestSources(manifest, tempDir, 'file');
 
       // Get existing documents from database
-      const referencesService = this.#services.get(ReferencesService);
-      const existingDocs = await referencesService.getDocumentIds(collectionId);
+      const documentsService = this.#services.get(DocumentsService);
+      const existingDocs = await documentsService.getDocumentIds(collectionId);
       const existingMap = new Map(existingDocs.map((doc) => [doc.id, doc.hash]));
 
       // Compute changes
@@ -624,7 +624,7 @@ class CollectionsService {
       // Apply changes
       if (toRemove.length > 0) {
         onProgress?.(`Removing ${toRemove.length} deleted documents...`);
-        await referencesService.deleteDocuments(collectionId, toRemove);
+        await documentsService.deleteDocuments(collectionId, toRemove);
       }
 
       const toProcess = [...toAdd, ...toUpdate];
@@ -644,7 +644,7 @@ class CollectionsService {
 
         if (!isNew) actualUpdated++;
 
-        await referencesService.updateDocument({
+        await documentsService.updateDocument({
           collection: collectionId,
           id: entry.id,
           content,
@@ -725,8 +725,8 @@ class CollectionsService {
     const entries = await this.resolveManifestSources(manifest, manifestDir, protocol);
 
     // Get existing documents from database
-    const referencesService = this.#services.get(ReferencesService);
-    const existingDocs = await referencesService.getDocumentIds(collectionId);
+    const documentsService = this.#services.get(DocumentsService);
+    const existingDocs = await documentsService.getDocumentIds(collectionId);
     const existingMap = new Map(existingDocs.map((doc) => [doc.id, doc.hash]));
 
     // Compute changes
@@ -762,7 +762,7 @@ class CollectionsService {
     // Apply changes
     if (toRemove.length > 0) {
       onProgress?.(`Removing ${toRemove.length} deleted documents...`);
-      await referencesService.deleteDocuments(collectionId, toRemove);
+      await documentsService.deleteDocuments(collectionId, toRemove);
     }
 
     const toProcess = [...toAdd, ...toUpdate];
@@ -784,7 +784,7 @@ class CollectionsService {
 
         if (!isNew) actualUpdated++;
 
-        await referencesService.updateDocument({
+        await documentsService.updateDocument({
           collection: collectionId,
           id: entry.id,
           content,
@@ -839,8 +839,8 @@ class CollectionsService {
     }
 
     // Get existing documents from database
-    const referencesService = this.#services.get(ReferencesService);
-    const existingDocs = await referencesService.getDocumentIds(collectionId);
+    const documentsService = this.#services.get(DocumentsService);
+    const existingDocs = await documentsService.getDocumentIds(collectionId);
     const existingMap = new Map(existingDocs.map((doc) => [doc.id, doc.hash]));
 
     // Compute changes
@@ -867,7 +867,7 @@ class CollectionsService {
     // Apply changes
     if (toRemove.length > 0) {
       onProgress?.(`Removing ${toRemove.length} deleted documents...`);
-      await referencesService.deleteDocuments(collectionId, toRemove);
+      await documentsService.deleteDocuments(collectionId, toRemove);
     }
 
     const toProcess = [...toAdd, ...toUpdate];
@@ -879,7 +879,7 @@ class CollectionsService {
       const fullPath = resolve(normalizedPath, file);
       const content = await readFile(fullPath, 'utf8');
 
-      await referencesService.updateDocument({
+      await documentsService.updateDocument({
         collection: collectionId,
         id: file,
         content,

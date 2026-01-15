@@ -46,7 +46,7 @@ const config = convict({
       env: 'CTXPKG_AUTO_START',
     },
   },
-  references: {
+  documents: {
     defaultCollections: {
       doc: 'Default collections to search in (optional)',
       format: Array,

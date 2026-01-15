@@ -19,7 +19,7 @@ class BackendClient implements BackendAPI {
   #connected = false;
 
   // Type-safe service proxies
-  readonly references: BackendAPI['references'];
+  readonly documents: BackendAPI['documents'];
   readonly collections: BackendAPI['collections'];
   readonly system: BackendAPI['system'];
 
@@ -49,7 +49,7 @@ class BackendClient implements BackendAPI {
     }
 
     // Create type-safe service proxies
-    this.references = createServiceProxy(this.#adapter, 'references');
+    this.documents = createServiceProxy(this.#adapter, 'documents');
     this.collections = createServiceProxy(this.#adapter, 'collections');
     this.system = createServiceProxy(this.#adapter, 'system');
   }

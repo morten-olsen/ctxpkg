@@ -21,7 +21,7 @@ The client module provides a type-safe interface for communicating with the back
 │                     BackendClient                           │
 │  ┌──────────────────────────────────────────────────────┐   │
 │  │              Service Proxies (via Proxy)             │   │
-│  │   .references.search()  →  "references.search"       │   │
+│  │   .documents.search()   →  "documents.search"        │   │
 │  │   .collections.sync()   →  "collections.sync"        │   │
 │  │   .system.ping()        →  "system.ping"             │   │
 │  └──────────────────────┬───────────────────────────────┘   │
@@ -72,7 +72,7 @@ const client = await createClient({
 });
 
 // Use type-safe API
-const results = await client.references.search({ query: 'foo' });
+const results = await client.documents.search({ query: 'foo' });
 await client.disconnect();
 ```
 
@@ -81,8 +81,8 @@ await client.disconnect();
 The client uses `Proxy` to convert method calls into RPC requests:
 
 ```typescript
-client.references.search({ query: 'foo' })
-// → adapter.request('references.search', { query: 'foo' })
+client.documents.search({ query: 'foo' })
+// → adapter.request('documents.search', { query: 'foo' })
 ```
 
 This provides full type safety — methods and parameters are typed from `BackendAPI`.
@@ -124,7 +124,7 @@ Errors from the backend include a `code` property matching `ErrorCodes`:
 
 ```typescript
 try {
-  await client.references.search({ query: 'foo' });
+  await client.documents.search({ query: 'foo' });
 } catch (error) {
   if (error.code === ErrorCodes.Timeout) { /* ... */ }
 }

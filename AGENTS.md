@@ -24,7 +24,7 @@ Each module has its own `AGENTS.md` with detailed architecture and patterns:
 | Daemon | `src/daemon/AGENTS.md` | Background process, Unix socket server |
 | Database | `src/database/AGENTS.md` | SQLite, migrations, vector search |
 | MCP | `src/mcp/AGENTS.md` | MCP server integration for editors |
-| References | `src/references/AGENTS.md` | Document storage, chunking, embeddings |
+| Documents | `src/documents/AGENTS.md` | Document storage, chunking, embeddings |
 | Tools | `src/tools/AGENTS.md` | AI agent tools, MCP/LangChain adapters |
 
 **When working on a module, read its `AGENTS.md` first.**

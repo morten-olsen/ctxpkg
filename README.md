@@ -42,7 +42,7 @@ ctxpkg col add react https://example.com/react-docs/v18/manifest.json
 ctxpkg col sync
 
 # Search your indexed documentation
-ctxpkg ref search "how to handle authentication"
+ctxpkg docs search "how to handle authentication"
 ```
 
 ## CLI Usage
@@ -79,25 +79,25 @@ ctxpkg col remove react
 ctxpkg col remove react --drop  # Also delete indexed data
 ```
 
-### Reference Commands
+### Document Commands
 
-Query indexed reference documents.
+Query indexed documents.
 
 ```bash
 # List indexed collections
-ctxpkg ref ls
+ctxpkg docs ls
 
 # Search documents
-ctxpkg ref search "authentication flow"
-ctxpkg ref search "error handling" -c project-docs -l 5
-ctxpkg ref search "hooks" --collections react lodash --limit 20
+ctxpkg docs search "authentication flow"
+ctxpkg docs search "error handling" -c project-docs -l 5
+ctxpkg docs search "hooks" --collections react lodash --limit 20
 
 # Interactive search
-ctxpkg ref isearch
+ctxpkg docs isearch
 
 # Drop a collection from index
-ctxpkg ref drop my-docs
-ctxpkg ref drop my-docs -f   # Skip confirmation
+ctxpkg docs drop my-docs
+ctxpkg docs drop my-docs -f   # Skip confirmation
 ```
 
 ### Publishing Packages
@@ -121,12 +121,12 @@ See [Distributing Collections via GitHub Releases](docs/github-distribution.md) 
 Expose reference tools via Model Context Protocol for AI editor integration.
 
 ```bash
-# Start MCP server with reference tools
-ctxpkg mcp references
-ctxpkg mcp ref
+# Start MCP server with document tools
+ctxpkg mcp documents
+ctxpkg mcp docs
 
 # Limit to specific collections
-ctxpkg mcp ref -c project-docs react
+ctxpkg mcp docs -c project-docs react
 ```
 
 **MCP Client Configuration:**
@@ -134,9 +134,9 @@ ctxpkg mcp ref -c project-docs react
 ```json
 {
   "mcpServers": {
-    "ctxpkg-references": {
+    "ctxpkg-documents": {
       "command": "ctxpkg",
-      "args": ["mcp", "references"]
+      "args": ["mcp", "documents"]
     }
   }
 }
@@ -224,12 +224,12 @@ Or with explicit file list and hashes:
 | ------------------------------- | ------------- |
 | `collections`                   | `col`         |
 | `collections list`              | `col ls`      |
-| `references`                    | `ref`         |
-| `references list-collections`   | `ref ls`      |
-| `references drop-collection`    | `ref drop`    |
-| `references interactive-search` | `ref isearch` |
+| `documents`                    | `docs`        |
+| `documents list-collections`   | `docs ls`     |
+| `documents drop-collection`    | `docs drop`   |
+| `documents interactive-search` | `docs isearch`|
 | `config`                        | `cfg`         |
-| `mcp references`                | `mcp ref`     |
+| `mcp documents`                 | `mcp docs`    |
 
 ## How It Works
 

@@ -19,7 +19,7 @@ import { createCliClient } from './cli.client.ts';
 import { Services } from '#root/utils/utils.services.ts';
 import { CollectionsService } from '#root/collections/collections.ts';
 
-const createReferenceCli = (command: Command) => {
+const createDocumentsCli = (command: Command) => {
   command.description('Manage reference document collections');
 
   // List collections command
@@ -31,7 +31,7 @@ const createReferenceCli = (command: Command) => {
       withErrorHandling(async () => {
         const client = await createCliClient();
         try {
-          const list = await client.references.listCollections();
+          const list = await client.documents.listCollections();
 
           if (list.length === 0) {
             formatInfo('No collections found.');
@@ -72,7 +72,7 @@ const createReferenceCli = (command: Command) => {
       withErrorHandling(async (name: string | undefined, options: { force?: boolean }) => {
         const client = await createCliClient();
         try {
-          const collections = await client.references.listCollections();
+          const collections = await client.documents.listCollections();
 
           if (collections.length === 0) {
             formatInfo('No collections found.');
@@ -118,7 +118,7 @@ const createReferenceCli = (command: Command) => {
             }
           }
 
-          await client.references.dropCollection({ collection: collectionName });
+          await client.documents.dropCollection({ collection: collectionName });
           formatSuccess(`Collection "${collectionName}" dropped successfully.`);
         } finally {
           await client.disconnect();
@@ -151,7 +151,7 @@ const createReferenceCli = (command: Command) => {
 
           console.log(chalk.dim('Processing files...'));
 
-          await client.references.updateCollection({
+          await client.documents.updateCollection({
             pattern: options.pattern,
             cwd: options.cwd,
             collection: collectionName,
@@ -205,7 +205,7 @@ const createReferenceCli = (command: Command) => {
             };
 
             // Merge specified collections with default collections and cwd (unless --no-default is set)
-            const defaultCollections = config.get('references.defaultCollections') as string[];
+            const defaultCollections = config.get('documents.defaultCollections') as string[];
             let collectionsToSearch: string[] | undefined;
 
             if (options.collections || options.default) {
@@ -238,7 +238,7 @@ const createReferenceCli = (command: Command) => {
             }
             console.log();
 
-            const results = await client.references.search({
+            const results = await client.documents.search({
               query,
               collections: collectionsToSearch,
               limit: parseInt(options.limit, 10),
@@ -301,7 +301,7 @@ const createReferenceCli = (command: Command) => {
         const client = await createCliClient();
         try {
           const collectionsService = services.get(CollectionsService);
-          const collections = await client.references.listCollections();
+          const collections = await client.documents.listCollections();
 
           if (collections.length === 0) {
             formatInfo('No collections found. Add some documents first.');
@@ -366,7 +366,7 @@ const createReferenceCli = (command: Command) => {
             default: '10',
           });
 
-          const results = await client.references.search({
+          const results = await client.documents.search({
             query,
             collections: selectedCollections ? [selectedCollections] : undefined,
             limit: parseInt(limitStr, 10) || 10,
@@ -417,4 +417,4 @@ const createReferenceCli = (command: Command) => {
     );
 };
 
-export { createReferenceCli };
+export { createDocumentsCli };

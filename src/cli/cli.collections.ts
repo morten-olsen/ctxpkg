@@ -162,7 +162,7 @@ const createCollectionsCli = (command: Command) => {
 
           if (options.drop && client) {
             const collectionId = collectionsService.computeCollectionId(spec);
-            await client.references.dropCollection({ collection: collectionId });
+            await client.documents.dropCollection({ collection: collectionId });
             await client.collections.delete({ id: collectionId });
             formatInfo(`Dropped indexed data for "${name}"`);
           }

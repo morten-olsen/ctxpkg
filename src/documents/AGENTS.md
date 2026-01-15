@@ -1,23 +1,23 @@
-# References — Agent Guidelines
+# Documents — Agent Guidelines
 
-This document describes the references module architecture for AI agents working on this codebase.
+This document describes the documents module architecture for AI agents working on this codebase.
 
 ## Overview
 
-The references module handles document storage, chunking, embedding, and semantic search. It's the core indexing engine that makes context searchable. Documents are split into chunks, embedded as vectors, and stored in SQLite with sqlite-vec for vector similarity search. The module uses hybrid search combining vector similarity with FTS5 keyword matching for improved retrieval quality.
+The documents module handles document storage, chunking, embedding, and semantic search. It's the core indexing engine that makes context searchable. Documents are split into chunks, embedded as vectors, and stored in SQLite with sqlite-vec for vector similarity search. The module uses hybrid search combining vector similarity with FTS5 keyword matching for improved retrieval quality.
 
 ## File Structure
 
 | File | Purpose |
 |------|---------|
-| `references.ts` | `ReferencesService` — document CRUD, chunking, embedding, hybrid search |
-| `references.schemas.ts` | Zod schemas for documents, search options, results |
+| `documents.ts` | `DocumentsService` — document CRUD, chunking, embedding, hybrid search |
+| `documents.schemas.ts` | Zod schemas for documents, search options, results |
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                   ReferencesService                             │
+│                   DocumentsService                              │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
 │  updateDocument()                                               │

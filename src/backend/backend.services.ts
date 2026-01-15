@@ -11,37 +11,37 @@ import {
 import type { CollectionInfo, SystemStatus, SyncResult, CollectionRecordInfo } from './backend.schemas.ts';
 
 import type { Services } from '#root/utils/utils.services.ts';
-import { ReferencesService } from '#root/references/references.ts';
+import { DocumentsService } from '#root/documents/documents.ts';
 import { CollectionsService } from '#root/collections/collections.ts';
-import type { ReferenceDocument, SearchChunkItem } from '#root/references/references.schemas.ts';
+import type { ReferenceDocument, SearchChunkItem } from '#root/documents/documents.schemas.ts';
 
 // Factory to create service procedures with access to Services container
 const createBackendServices = (services: Services, getStatus: () => { uptime: number; connections: number }) => {
-  // References service procedures
-  const references = {
+  // Documents service procedures
+  const documents = {
     listCollections: procedure(z.object({}), async (): Promise<CollectionInfo[]> => {
-      const refService = services.get(ReferencesService);
-      return refService.listCollections();
+      const docService = services.get(DocumentsService);
+      return docService.listCollections();
     }),
 
     dropCollection: procedure(dropCollectionParamsSchema, async (params): Promise<void> => {
-      const refService = services.get(ReferencesService);
-      await refService.dropCollection(params.collection);
+      const docService = services.get(DocumentsService);
+      await docService.dropCollection(params.collection);
     }),
 
     updateCollection: procedure(updateCollectionOptionsSchema, async (params): Promise<void> => {
-      const refService = services.get(ReferencesService);
-      await refService.updateCollectionFromGlob(params);
+      const docService = services.get(DocumentsService);
+      await docService.updateCollectionFromGlob(params);
     }),
 
     search: procedure(searchChunksOptionsSchema, async (params): Promise<SearchChunkItem[]> => {
-      const refService = services.get(ReferencesService);
-      return refService.search(params);
+      const docService = services.get(DocumentsService);
+      return docService.search(params);
     }),
 
     getDocument: procedure(getDocumentParamsSchema, async (params): Promise<ReferenceDocument | null> => {
-      const refService = services.get(ReferencesService);
-      return refService.getDocument(params.collection, params.id);
+      const docService = services.get(DocumentsService);
+      return docService.getDocument(params.collection, params.id);
     }),
   };
 
@@ -95,7 +95,7 @@ const createBackendServices = (services: Services, getStatus: () => { uptime: nu
       return {
         uptime: status.uptime,
         connections: status.connections,
-        services: ['references', 'collections'],
+        services: ['documents', 'collections'],
       };
     }),
 
@@ -105,7 +105,7 @@ const createBackendServices = (services: Services, getStatus: () => { uptime: nu
     }),
   };
 
-  return { references, collections, system };
+  return { documents, collections, system };
 };
 
 // Type for the services object returned by createBackendServices
