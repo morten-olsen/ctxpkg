@@ -57,7 +57,7 @@ const createCollectionsCli = (command: Command) => {
   command
     .command('add')
     .argument('<name>', 'Name/alias for the collection')
-    .argument('<url>', 'Manifest or bundle URL (supports https://, file://, or relative paths)')
+    .argument('<url>', 'Manifest or bundle URL (supports https://, file://, git+https://, git+ssh://, or relative paths)')
     .description('Add a collection to project or global config')
     .option('-g, --global', 'Add to global config instead of project config')
     .action(
@@ -73,9 +73,14 @@ const createCollectionsCli = (command: Command) => {
             return;
           }
 
-          // Normalize local paths to file:// URLs
+          // Normalize local paths to file:// URLs (but not git URLs)
           let normalizedUrl = url;
-          if (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('file://')) {
+          if (
+            !url.startsWith('http://') &&
+            !url.startsWith('https://') &&
+            !url.startsWith('file://') &&
+            !url.startsWith('git+')
+          ) {
             normalizedUrl = `file://${url}`;
           }
 

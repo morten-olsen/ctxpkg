@@ -148,9 +148,32 @@ Restart your editor. Your AI assistant now has access to tools like `documents_s
 
 ## Next Steps
 
-### Add a Remote Collection
+### Add Documentation from Git Repositories
 
-You can also add documentation packages hosted online:
+The easiest way to share documentation is directly from a git repository. No publishing step required — just point to a repo containing a `manifest.json`:
+
+```bash
+# From a public GitHub repo (pin to a tag)
+ctxpkg col add react "git+https://github.com/facebook/react#v18.2.0?manifest=docs/manifest.json"
+
+# From a private repo via SSH (uses your local git credentials)
+ctxpkg col add internal "git+ssh://git@github.com/myorg/docs#main?manifest=manifest.json"
+
+# Sync to index the documents
+ctxpkg col sync
+```
+
+**Git URL format:** `git+<protocol>://<host>/<repo>#<ref>?manifest=<path>`
+
+- `protocol` — `https` or `ssh`
+- `ref` — branch, tag, or commit (optional, defaults to default branch)
+- `manifest` — path to `manifest.json` within the repo
+
+This respects your local git configuration, including SSH keys and credential helpers — if you can `git clone` a repo, ctxpkg can index it.
+
+### Add a Remote HTTP Collection
+
+You can also add documentation from HTTP URLs:
 
 ```bash
 ctxpkg col add react https://example.com/react-docs/manifest.json
@@ -195,7 +218,12 @@ Now your personal notes are searchable from any project.
 **Adding remote global collections:**
 
 ```bash
+# From a git repository (recommended)
+ctxpkg col add -g typescript-docs "git+https://github.com/microsoft/TypeScript#v5.3.0?manifest=docs/manifest.json"
+
+# Or from an HTTP URL
 ctxpkg col add -g typescript-docs https://example.com/ts-docs/manifest.json
+
 ctxpkg col sync -g
 ```
 

@@ -1,5 +1,9 @@
 # ctxpkg
 
+<p align="center">
+  <img src="docs/assets/banner.jpg" alt="ctxpkg banner" width="100%">
+</p>
+
 A package manager for AI agent context — manage, sync, and distribute documentation collections for AI-assisted development.
 
 > **The Vision:** Imagine an AI assistant that knows your context — your team's commit style, your company's security policies, your preferred patterns — without you explaining it every session.
@@ -16,7 +20,7 @@ Stack documentation layers — from personal notes to team guidelines to project
 - **Context Stacking** — Layer documentation from multiple sources (personal, team, project, global)
 - **Semantic Search** — Local vector + keyword search finds relevant content without dumping everything into prompts
 - **MCP Integration** — AI editors like Cursor and Claude Desktop can query your context directly
-- **Distribution** — Share context packages via Git, HTTP, or GitHub Releases
+- **Git-Native Distribution** — Index docs directly from any git repo (public or private) — no publishing required
 
 ## Installation
 
@@ -90,13 +94,21 @@ Layer context from multiple sources:
       "url": "file://./docs/manifest.json"
     },
     "team-standards": {
-      "url": "https://github.com/myorg/standards/releases/latest/download/standards.tar.gz"
+      "url": "git+https://github.com/myorg/standards#main?manifest=manifest.json"
     },
     "react": {
-      "url": "https://example.com/react-docs/v18/manifest.json"
+      "url": "git+https://github.com/facebook/react#v18.2.0?manifest=docs/manifest.json"
     }
   }
 }
+```
+
+**Git repositories are the easiest way to share documentation** — no publishing step required. Just point to a repo with a `manifest.json`:
+
+```bash
+# Add docs from any git repo (HTTPS or SSH)
+ctxpkg col add team-docs "git+https://github.com/myorg/docs#main?manifest=manifest.json"
+ctxpkg col add private-docs "git+ssh://git@github.com/myorg/private#main?manifest=manifest.json"
 ```
 
 Add personal/global context available across all projects:

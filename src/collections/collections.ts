@@ -6,6 +6,7 @@ import { resolve, join, dirname } from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 
+import { simpleGit } from 'simple-git';
 import * as tar from 'tar';
 
 import {
@@ -14,6 +15,8 @@ import {
   manifestSchema,
   isGlobSources,
   isFileSources,
+  isGitUrl,
+  parseGitUrl,
   type ProjectConfig,
   type CollectionSpec,
   type CollectionRecord,
@@ -428,6 +431,10 @@ class CollectionsService {
     cwd: string = process.cwd(),
     options: { force?: boolean; onProgress?: (message: string) => void } = {},
   ): Promise<SyncResult> => {
+    // Check if it's a git URL
+    if (isGitUrl(spec.url)) {
+      return this.syncGitCollection(name, spec, cwd, options);
+    }
     return this.syncPkgCollection(name, spec, cwd, options);
   };
 
@@ -439,7 +446,21 @@ class CollectionsService {
   public parseManifestUrl = (
     url: string,
     cwd: string = process.cwd(),
-  ): { protocol: 'file' | 'https'; path: string; isBundle: boolean } => {
+  ):
+    | { protocol: 'file' | 'https'; path: string; isBundle: boolean }
+    | { protocol: 'git'; cloneUrl: string; ref: string | null; manifestPath: string; isBundle: false } => {
+    // Check for git URLs first
+    if (isGitUrl(url)) {
+      const parsed = parseGitUrl(url);
+      return {
+        protocol: 'git',
+        cloneUrl: parsed.cloneUrl,
+        ref: parsed.ref,
+        manifestPath: parsed.manifestPath,
+        isBundle: false,
+      };
+    }
+
     const isBundle = url.endsWith('.tar.gz') || url.endsWith('.tgz');
 
     if (url.startsWith('file://')) {
@@ -674,7 +695,14 @@ class CollectionsService {
   ): Promise<SyncResult> => {
     const { force = false, onProgress } = options;
     const collectionId = this.computeCollectionId(spec);
-    const { protocol, path: bundlePath } = this.parseManifestUrl(spec.url, cwd);
+    const parsed = this.parseManifestUrl(spec.url, cwd);
+
+    // This method only handles file/https bundles, not git URLs
+    if (parsed.protocol === 'git') {
+      throw new Error('syncBundleCollection does not support git URLs');
+    }
+
+    const { protocol, path: bundlePath } = parsed;
 
     // Reconstruct URL with protocol for downloadAndExtractBundle
     const bundleUrl = protocol === 'file' ? `file://${bundlePath}` : bundlePath;
@@ -793,6 +821,174 @@ class CollectionsService {
   };
 
   /**
+   * Sync a git collection.
+   * Clones the repository to a temp directory relative to cwd (to preserve includeIf git config),
+   * reads the manifest from the specified path, and syncs documents.
+   */
+  public syncGitCollection = async (
+    name: string,
+    spec: CollectionSpec,
+    cwd: string = process.cwd(),
+    options: { force?: boolean; onProgress?: (message: string) => void } = {},
+  ): Promise<SyncResult> => {
+    const { force = false, onProgress } = options;
+    const collectionId = this.computeCollectionId(spec);
+    const parsed = parseGitUrl(spec.url);
+
+    let tempDir: string | null = null;
+
+    try {
+      // Create temp directory relative to cwd (preserves includeIf git config)
+      const tmpBase = join(cwd, '.ctxpkg', 'tmp');
+      mkdirSync(tmpBase, { recursive: true });
+
+      // Create unique temp dir
+      const uniqueId = Math.random().toString(36).substring(2, 10);
+      tempDir = join(tmpBase, `git-${uniqueId}`);
+      mkdirSync(tempDir, { recursive: true });
+
+      // Clone the repository
+      const refDisplay = parsed.ref ? ` @ ${parsed.ref}` : '';
+      onProgress?.(`Cloning ${parsed.cloneUrl}${refDisplay}...`);
+
+      const git = simpleGit();
+
+      // Build clone options - disable hooks for security
+      const cloneOptions: string[] = ['--config', 'core.hooksPath=/dev/null'];
+
+      // Use shallow clone when possible (not for commit SHAs)
+      const isCommitSha = parsed.ref && /^[a-f0-9]{7,40}$/i.test(parsed.ref);
+      if (!isCommitSha) {
+        cloneOptions.push('--depth', '1');
+        if (parsed.ref) {
+          cloneOptions.push('--branch', parsed.ref);
+        }
+      }
+
+      await git.clone(parsed.cloneUrl, tempDir, cloneOptions);
+
+      // For commit SHAs, checkout the specific commit
+      if (isCommitSha && parsed.ref) {
+        onProgress?.(`Checking out ${parsed.ref}...`);
+        await simpleGit(tempDir).checkout(parsed.ref);
+      }
+
+      // Locate manifest
+      const manifestPath = join(tempDir, parsed.manifestPath);
+      if (!existsSync(manifestPath)) {
+        throw new Error(`Manifest not found at ${parsed.manifestPath} in repository`);
+      }
+
+      onProgress?.('Reading manifest...');
+
+      // Load manifest
+      const manifest = await this.loadLocalManifest(manifestPath);
+      const manifestContent = await readFile(manifestPath, 'utf8');
+      const manifestHash = createHash('sha256').update(manifestContent).digest('hex');
+
+      // Check if we can skip sync
+      const existingCollection = await this.getCollection(collectionId);
+      if (!force && existingCollection?.manifest_hash === manifestHash) {
+        onProgress?.('Repository unchanged, skipping sync');
+        return { added: 0, updated: 0, removed: 0, total: 0 };
+      }
+
+      onProgress?.('Resolving sources...');
+
+      // Get manifest directory for resolving relative paths
+      const manifestDir = dirname(manifestPath);
+
+      // Resolve sources (always use 'file' protocol for cloned repo)
+      const entries = await this.resolveManifestSources(manifest, manifestDir, 'file');
+
+      // Get existing documents from database
+      const documentsService = this.#services.get(DocumentsService);
+      const existingDocs = await documentsService.getDocumentIds(collectionId);
+      const existingMap = new Map(existingDocs.map((doc) => [doc.id, doc.hash]));
+
+      // Compute changes
+      const toAdd: ResolvedFileEntry[] = [];
+      const toUpdate: ResolvedFileEntry[] = [];
+      const toRemove: string[] = [];
+
+      for (const entry of entries) {
+        const existingHash = existingMap.get(entry.id);
+
+        if (!existingHash) {
+          toAdd.push(entry);
+        } else if (force) {
+          toUpdate.push(entry);
+        } else if (entry.hash) {
+          if (existingHash !== entry.hash) {
+            toUpdate.push(entry);
+          }
+        } else {
+          toUpdate.push(entry);
+        }
+      }
+
+      const currentIds = new Set(entries.map((e) => e.id));
+      for (const [id] of existingMap) {
+        if (!currentIds.has(id)) {
+          toRemove.push(id);
+        }
+      }
+
+      // Apply changes
+      if (toRemove.length > 0) {
+        onProgress?.(`Removing ${toRemove.length} deleted documents...`);
+        await documentsService.deleteDocuments(collectionId, toRemove);
+      }
+
+      const toProcess = [...toAdd, ...toUpdate];
+      let actualUpdated = 0;
+
+      for (let i = 0; i < toProcess.length; i++) {
+        const entry = toProcess[i];
+        const isNew = toAdd.includes(entry);
+        onProgress?.(`${isNew ? 'Adding' : 'Checking'} ${entry.id} (${i + 1}/${toProcess.length})...`);
+
+        const content = await this.fetchContent(entry.url);
+        const contentHash = createHash('sha256').update(content).digest('hex');
+
+        if (!isNew && !force && existingMap.get(entry.id) === contentHash) {
+          continue;
+        }
+
+        if (!isNew) actualUpdated++;
+
+        await documentsService.updateDocument({
+          collection: collectionId,
+          id: entry.id,
+          content,
+        });
+      }
+
+      // Update collection record
+      await this.upsertCollection(collectionId, {
+        url: spec.url,
+        name: manifest.name,
+        version: manifest.version,
+        description: manifest.description ?? null,
+        manifest_hash: manifestHash,
+        last_sync_at: new Date().toISOString(),
+      });
+
+      return {
+        added: toAdd.length,
+        updated: actualUpdated,
+        removed: toRemove.length,
+        total: entries.length,
+      };
+    } finally {
+      // Clean up temp directory
+      if (tempDir) {
+        await rm(tempDir, { recursive: true, force: true }).catch(() => undefined);
+      }
+    }
+  };
+
+  /**
    * Sync a pkg collection.
    */
   public syncPkgCollection = async (
@@ -803,7 +999,14 @@ class CollectionsService {
   ): Promise<SyncResult> => {
     const { force = false, onProgress } = options;
     const collectionId = this.computeCollectionId(spec);
-    const { protocol, path: manifestPath, isBundle } = this.parseManifestUrl(spec.url, cwd);
+    const parsed = this.parseManifestUrl(spec.url, cwd);
+
+    // This method only handles file/https, not git URLs
+    if (parsed.protocol === 'git') {
+      throw new Error('syncPkgCollection does not support git URLs');
+    }
+
+    const { protocol, path: manifestPath, isBundle } = parsed;
 
     if (isBundle) {
       return this.syncBundleCollection(name, spec, cwd, options);

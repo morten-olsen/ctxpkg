@@ -87,6 +87,83 @@ const isFileSources = (sources: ManifestSources): sources is FileSources => {
   return 'files' in sources;
 };
 
+// === Git URL Parsing ===
+
+type ParsedGitUrl = {
+  protocol: 'git';
+  cloneUrl: string; // URL to clone (without git+ prefix)
+  ref: string | null; // Branch, tag, or commit SHA
+  manifestPath: string; // Path to manifest within repo
+};
+
+/**
+ * Check if a URL is a git URL (starts with git+https://, git+ssh://, or git+file://).
+ */
+const isGitUrl = (url: string): boolean => {
+  return url.startsWith('git+https://') || url.startsWith('git+ssh://') || url.startsWith('git+file://');
+};
+
+/**
+ * Parse a git URL into its components.
+ *
+ * Format: git+<protocol>://<host>/<path>[#<ref>]?manifest=<path>
+ *
+ * Examples:
+ *   git+https://github.com/owner/repo#v1.0.0?manifest=docs/manifest.json
+ *   git+ssh://git@github.com/org/repo#main?manifest=manifest.json
+ */
+const parseGitUrl = (url: string): ParsedGitUrl => {
+  if (!isGitUrl(url)) {
+    throw new Error(`Not a git URL: ${url}`);
+  }
+
+  // Remove git+ prefix
+  const urlWithoutPrefix = url.slice(4);
+
+  // Split off the fragment (#ref) first
+  const hashIndex = urlWithoutPrefix.indexOf('#');
+  const queryIndex = urlWithoutPrefix.indexOf('?');
+
+  let baseUrl: string;
+  let ref: string | null = null;
+  let queryString: string;
+
+  if (hashIndex !== -1 && (queryIndex === -1 || hashIndex < queryIndex)) {
+    // Has fragment: extract ref
+    baseUrl = urlWithoutPrefix.slice(0, hashIndex);
+    const afterHash = urlWithoutPrefix.slice(hashIndex + 1);
+    const refQueryIndex = afterHash.indexOf('?');
+    if (refQueryIndex !== -1) {
+      ref = afterHash.slice(0, refQueryIndex);
+      queryString = afterHash.slice(refQueryIndex + 1);
+    } else {
+      ref = afterHash;
+      queryString = '';
+    }
+  } else if (queryIndex !== -1) {
+    // No fragment, but has query
+    baseUrl = urlWithoutPrefix.slice(0, queryIndex);
+    queryString = urlWithoutPrefix.slice(queryIndex + 1);
+  } else {
+    throw new Error(`Git URL must specify manifest path: ?manifest=<path>`);
+  }
+
+  // Parse query string for manifest path
+  const params = new URLSearchParams(queryString);
+  const manifestPath = params.get('manifest');
+
+  if (!manifestPath) {
+    throw new Error(`Git URL must specify manifest path: ?manifest=<path>`);
+  }
+
+  return {
+    protocol: 'git',
+    cloneUrl: baseUrl,
+    ref: ref || null,
+    manifestPath,
+  };
+};
+
 export type {
   CollectionSpec,
   ProjectConfig,
@@ -98,6 +175,7 @@ export type {
   Manifest,
   CollectionRecord,
   ResolvedFileEntry,
+  ParsedGitUrl,
 };
 
 export {
@@ -112,4 +190,6 @@ export {
   collectionRecordSchema,
   isGlobSources,
   isFileSources,
+  isGitUrl,
+  parseGitUrl,
 };

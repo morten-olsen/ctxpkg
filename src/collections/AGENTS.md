@@ -4,7 +4,7 @@ This document describes the collections module architecture for AI agents workin
 
 ## Overview
 
-The collections module manages context packages — both local and remote manifest-based packages. It handles project configuration (`context.json`), collection syncing, and manifest resolution. Think of it as the "package manager" part of ctxpkg.
+The collections module manages context packages — local files, remote URLs, and git repositories. It handles project configuration (`context.json`), collection syncing, and manifest resolution. Think of it as the "package manager" part of ctxpkg.
 
 ## File Structure
 
@@ -33,10 +33,22 @@ Maps user-friendly names to collection specs (local to a project):
 {
   "collections": {
     "my-docs": { "url": "file://./docs/manifest.json" },
-    "langchain": { "url": "https://example.com/langchain/manifest.json" }
+    "langchain": { "url": "https://example.com/langchain/manifest.json" },
+    "react": { "url": "git+https://github.com/facebook/react#v18.2.0?manifest=docs/manifest.json" }
   }
 }
 ```
+
+### URL Formats
+
+| Protocol | Format | Example |
+|----------|--------|---------|
+| Local file | `file://path/to/manifest.json` | `file://./docs/manifest.json` |
+| HTTPS | `https://host/path/manifest.json` | `https://example.com/pkg/manifest.json` |
+| Git HTTPS | `git+https://host/repo#ref?manifest=path` | `git+https://github.com/owner/repo#v1.0?manifest=docs/manifest.json` |
+| Git SSH | `git+ssh://git@host/repo#ref?manifest=path` | `git+ssh://git@github.com/org/repo#main?manifest=manifest.json` |
+| Git local | `git+file:///path/repo?manifest=path` | `git+file:///tmp/repo?manifest=manifest.json` |
+| Bundle | `*.tar.gz` or `*.tgz` | `https://example.com/pkg.tar.gz` |
 
 ### Global Config (`~/.config/ctxpkg/global-context.json`)
 
@@ -89,7 +101,7 @@ Sources can be `{ glob: [...] }` (local only) or `{ files: [...] }`.
 │  addToConfig()         │  syncCollection()                  │
 │  removeFromConfig()    │  syncPkgCollection()               │
 │  getFromConfig()       │  syncBundleCollection()            │
-│  getAllCollections()   │                                    │
+│  getAllCollections()   │  syncGitCollection()               │
 ├────────────────────────┼────────────────────────────────────┤
 │  Collection IDs        │  Manifest Handling                 │
 │  ─────────────────     │  ────────────────────              │
@@ -113,7 +125,7 @@ Sources can be `{ glob: [...] }` (local only) or `{ files: [...] }`.
 
 ## Sync Flow
 
-### Package Collections
+### Package Collections (file://, https://)
 
 1. Parse manifest URL (file:// or https://)
 2. Load and parse `manifest.json`
@@ -128,6 +140,23 @@ Sources can be `{ glob: [...] }` (local only) or `{ files: [...] }`.
 2. Find `manifest.json` in extracted content
 3. Process as local package collection
 4. Clean up temp directory
+
+### Git Collections
+
+1. Parse git URL to extract clone URL, ref, and manifest path
+2. Clone to cwd-relative temp directory (`.ctxpkg/tmp/git-*`)
+   - Uses shallow clone (`--depth 1`) when possible
+   - Disables git hooks for security
+   - Preserves user's git config (includeIf directives, SSH keys, etc.)
+3. Checkout specific ref (branch/tag/commit)
+4. Load manifest from specified path in repo
+5. Process as local package collection
+6. Clean up temp directory
+
+**Git URL Components:**
+- `git+https://` or `git+ssh://` — protocol prefix
+- `#ref` — optional branch, tag, or commit SHA (defaults to default branch)
+- `?manifest=path` — required path to manifest.json in repo
 
 ## Collection ID Computation
 

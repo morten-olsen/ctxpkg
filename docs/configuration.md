@@ -35,10 +35,10 @@ The `context.json` file lives in your project root, alongside your code.
       "url": "file://./docs/manifest.json"
     },
     "react": {
-      "url": "https://example.com/react-docs/v18/manifest.json"
+      "url": "git+https://github.com/facebook/react#v18.2.0?manifest=docs/manifest.json"
     },
     "org-standards": {
-      "url": "file://../shared/standards/manifest.json"
+      "url": "git+ssh://git@github.com/myorg/standards#main?manifest=manifest.json"
     },
     "lodash": {
       "url": "https://example.com/lodash-docs.tar.gz"
@@ -54,8 +54,30 @@ The `context.json` file lives in your project root, alongside your code.
 | Relative path | `./docs/manifest.json` | Local manifest relative to `context.json` |
 | `file://` URL | `file://../shared/manifest.json` | Explicit local file reference |
 | `file://` absolute | `file:///Users/me/docs/manifest.json` | Absolute local path |
+| Git HTTPS | `git+https://github.com/org/repo#ref?manifest=path` | Git repo via HTTPS |
+| Git SSH | `git+ssh://git@github.com/org/repo#ref?manifest=path` | Git repo via SSH (private repos) |
 | HTTP/HTTPS | `https://example.com/manifest.json` | Remote manifest |
 | Bundle URL | `https://example.com/docs.tar.gz` | Pre-packaged bundle |
+
+### Git URL Format
+
+Git URLs follow the pattern: `git+<protocol>://<host>/<repo>#<ref>?manifest=<path>`
+
+| Component | Required | Description |
+|-----------|----------|-------------|
+| `git+` | Yes | Protocol prefix |
+| `protocol` | Yes | `https` or `ssh` |
+| `#ref` | No | Branch, tag, or commit SHA (defaults to default branch) |
+| `manifest=` | Yes | Path to `manifest.json` within the repo |
+
+**Examples:**
+```
+git+https://github.com/facebook/react#v18.2.0?manifest=docs/manifest.json
+git+ssh://git@github.com/myorg/private-docs#main?manifest=manifest.json
+git+https://gitlab.com/company/standards#a1b2c3d?manifest=manifest.json
+```
+
+Git collections use your local git configuration — SSH keys, credential helpers, and `includeIf` directives all work as expected.
 
 ## Global Configuration
 
@@ -76,13 +98,13 @@ Same as project configuration:
 {
   "collections": {
     "typescript-docs": {
-      "url": "https://example.com/ts-docs/manifest.json"
+      "url": "git+https://github.com/microsoft/TypeScript#v5.3.0?manifest=docs/manifest.json"
     },
     "personal-notes": {
       "url": "file:///Users/me/notes/manifest.json"
     },
     "company-standards": {
-      "url": "https://github.com/myorg/standards/releases/latest/download/standards.tar.gz"
+      "url": "git+ssh://git@github.com/myorg/standards#main?manifest=manifest.json"
     }
   }
 }
@@ -275,7 +297,25 @@ ctxpkg config path
 
 ## Authentication for Private Packages
 
-For private repositories, ctxpkg supports netrc-based authentication.
+### Git Repositories (Recommended)
+
+For private git repositories, use SSH URLs — ctxpkg respects your local git configuration:
+
+```bash
+# Uses your SSH keys from ~/.ssh/
+ctxpkg col add private-docs "git+ssh://git@github.com/myorg/docs#main?manifest=manifest.json"
+```
+
+This works with:
+- SSH keys and ssh-agent
+- Git credential helpers
+- `includeIf` directives for directory-specific configs
+
+If you can `git clone` a repository from your terminal, ctxpkg can index it.
+
+### HTTP URLs with netrc
+
+For private packages served via HTTP, ctxpkg supports netrc-based authentication.
 
 ### Using netrc
 
