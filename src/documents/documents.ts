@@ -223,6 +223,9 @@ class DocumentsService {
     const embedder = this.#services.get(EmbedderService);
     const queryEmbedding = await embedder.createQueryEmbedding(query);
 
+    // Build vector search query
+    // Note: We use a subquery to filter by computed distance since SQLite
+    // doesn't support HAVING without GROUP BY
     let vectorQuery = database(tableNames.referenceDocumentChunks)
       .select('id', 'collection', 'document', 'content')
       .select(database.raw('vec_distance_cosine(?, embedding) as distance', [JSON.stringify(queryEmbedding)]));
@@ -230,13 +233,15 @@ class DocumentsService {
     if (collections) {
       vectorQuery = vectorQuery.whereIn('collection', collections);
     }
-    if (maxDistance !== undefined) {
-      vectorQuery = vectorQuery.having('distance', '<=', maxDistance);
-    }
 
     vectorQuery = vectorQuery.orderBy('distance', 'asc').limit(candidateLimit);
 
-    const vectorResults = await vectorQuery;
+    let vectorResults = await vectorQuery;
+
+    // Filter by maxDistance if specified (done in JS since SQLite doesn't support HAVING on computed columns)
+    if (maxDistance !== undefined) {
+      vectorResults = vectorResults.filter((row) => row.distance <= maxDistance);
+    }
 
     // 2. Keyword search using FTS5 (if hybrid search enabled)
     let keywordResults: { id: string; collection: string; document: string; content: string; rank: number }[] = [];

@@ -1,0 +1,12 @@
+{
+  "name": "cdn-docs",
+  "version": "1.0.0",
+  "description": "Documentation served from CDN",
+  "baseUrl": "https://cdn.example.com/docs/",
+  "sources": {
+    "files": [
+      "intro.md",
+      "tutorial.md"
+    ]
+  }
+}

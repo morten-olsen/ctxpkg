@@ -30,6 +30,7 @@
     "eslint-config-prettier": "10.1.8",
     "eslint-plugin-import": "2.32.0",
     "eslint-plugin-prettier": "5.5.4",
+    "msw": "^2.12.7",
     "prettier": "3.7.4",
     "tsx": "^4.21.0",
     "typescript": "5.9.3",

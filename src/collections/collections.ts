@@ -674,7 +674,10 @@ class CollectionsService {
   ): Promise<SyncResult> => {
     const { force = false, onProgress } = options;
     const collectionId = this.computeCollectionId(spec);
-    const { path: bundleUrl } = this.parseManifestUrl(spec.url, cwd);
+    const { protocol, path: bundlePath } = this.parseManifestUrl(spec.url, cwd);
+
+    // Reconstruct URL with protocol for downloadAndExtractBundle
+    const bundleUrl = protocol === 'file' ? `file://${bundlePath}` : bundlePath;
 
     let tempDir: string | null = null;
 

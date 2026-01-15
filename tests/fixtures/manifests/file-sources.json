@@ -1,0 +1,12 @@
+{
+  "name": "file-sources-docs",
+  "version": "2.0.0",
+  "description": "Documentation with explicit file sources",
+  "sources": {
+    "files": [
+      "getting-started.md",
+      { "path": "api/core.md" },
+      { "path": "guides/authentication.md", "hash": "sha256:abc123" }
+    ]
+  }
+}
