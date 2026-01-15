@@ -21,6 +21,7 @@ Stack documentation layers — from personal notes to team guidelines to project
 - **Semantic Search** — Local vector + keyword search finds relevant content without dumping everything into prompts
 - **MCP Integration** — AI editors like Cursor and Claude Desktop can query your context directly
 - **Git-Native Distribution** — Index docs directly from any git repo (public or private) — no publishing required
+- **Bundle Any Source** — Package documentation from Confluence, Notion, or any system into distributable `.tar.gz` archives
 
 ## Installation
 
@@ -135,6 +136,35 @@ Connect ctxpkg to your AI editor:
 Your AI assistant gains access to 8 document tools: `search`, `search_batch`, `get_document`, `get_section`, `get_outline`, `find_related`, `list_collections`, and `list_documents`.
 
 See [MCP Server Documentation](docs/mcp-server.md) for details.
+
+## Distributing Internal Documentation
+
+ctxpkg can package documentation from any source — Confluence, Notion, SharePoint, or internal wikis — into distributable bundles that teams can share via internal systems.
+
+**Workflow:**
+
+1. **Export your docs as Markdown** — Use your platform's export tools or APIs to extract documentation
+2. **Add a manifest** — Create a `manifest.json` describing the collection:
+   ```json
+   {
+     "name": "company-knowledge-base",
+     "sources": [{ "pattern": "**/*.md" }]
+   }
+   ```
+3. **Create a bundle** — Package everything into a distributable archive:
+   ```bash
+   ctxpkg col pack --output knowledge-base-v1.tar.gz
+   ```
+4. **Distribute internally** — Host the bundle on internal file servers, S3, or artifact storage
+
+Teams can then add the bundle:
+```bash
+ctxpkg col add kb https://internal.example.com/bundles/knowledge-base-v1.tar.gz
+```
+
+This enables organizations to centralize and distribute institutional knowledge to AI agents across all teams, without requiring git repositories or public hosting.
+
+See [Publishing Packages](docs/github-distribution.md) for automated publishing with GitHub Actions.
 
 ## Development
 
