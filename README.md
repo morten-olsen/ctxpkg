@@ -114,6 +114,8 @@ ctxpkg col pack
 ctxpkg col pack --output my-docs-1.0.0.tar.gz
 ```
 
+See [Distributing Collections via GitHub Releases](docs/github-distribution.md) for a complete guide on automating builds and publishing with GitHub Actions.
+
 ### MCP Server
 
 Expose reference tools via Model Context Protocol for AI editor integration.
