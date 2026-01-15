@@ -1,8 +1,8 @@
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync, writeFileSync, realpathSync, createWriteStream } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, realpathSync, createWriteStream, mkdirSync } from 'node:fs';
 import { readFile, glob, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { resolve, join } from 'node:path';
+import { resolve, join, dirname } from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 
@@ -94,6 +94,145 @@ class CollectionsService {
     }
     const initialConfig: ProjectConfig = { collections: {} };
     this.writeProjectConfig(initialConfig, cwd);
+  };
+
+  // === Global Config ===
+
+  /**
+   * Get the global config file path.
+   */
+  public getGlobalConfigPath = (): string => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (config as any).get('global.configFile') as string;
+  };
+
+  /**
+   * Check if the global config file exists.
+   */
+  public globalConfigExists = (): boolean => {
+    return existsSync(this.getGlobalConfigPath());
+  };
+
+  /**
+   * Read and parse the global config file.
+   */
+  public readGlobalConfig = (): ProjectConfig => {
+    const configPath = this.getGlobalConfigPath();
+    if (!existsSync(configPath)) {
+      return { collections: {} };
+    }
+    const content = readFileSync(configPath, 'utf-8');
+    const parsed = JSON.parse(content);
+    return projectConfigSchema.parse(parsed);
+  };
+
+  /**
+   * Write the global config file. Auto-creates directory if needed.
+   */
+  public writeGlobalConfig = (globalConfig: ProjectConfig): void => {
+    const configPath = this.getGlobalConfigPath();
+    const configDir = dirname(configPath);
+
+    // Ensure directory exists
+    if (!existsSync(configDir)) {
+      mkdirSync(configDir, { recursive: true });
+    }
+
+    const content = JSON.stringify(globalConfig, null, 2);
+    writeFileSync(configPath, content, 'utf-8');
+  };
+
+  // === Unified Config Operations ===
+
+  /**
+   * Add a collection to project or global config.
+   */
+  public addToConfig = (name: string, spec: CollectionSpec, options: { global?: boolean; cwd?: string } = {}): void => {
+    const { global: isGlobal = false, cwd = process.cwd() } = options;
+
+    if (isGlobal) {
+      const globalConfig = this.readGlobalConfig();
+      if (name in globalConfig.collections) {
+        throw new Error(`Collection "${name}" already exists in global config`);
+      }
+      globalConfig.collections[name] = spec;
+      this.writeGlobalConfig(globalConfig);
+    } else {
+      this.addToProjectConfig(name, spec, cwd);
+    }
+  };
+
+  /**
+   * Remove a collection from project or global config.
+   */
+  public removeFromConfig = (name: string, options: { global?: boolean; cwd?: string } = {}): void => {
+    const { global: isGlobal = false, cwd = process.cwd() } = options;
+
+    if (isGlobal) {
+      const globalConfig = this.readGlobalConfig();
+      if (!(name in globalConfig.collections)) {
+        throw new Error(`Collection "${name}" not found in global config`);
+      }
+      const { [name]: _removed, ...rest } = globalConfig.collections;
+      void _removed;
+      globalConfig.collections = rest;
+      this.writeGlobalConfig(globalConfig);
+    } else {
+      this.removeFromProjectConfig(name, cwd);
+    }
+  };
+
+  /**
+   * Get a collection spec by name from project or global config.
+   * If global is not specified, searches local first then global.
+   */
+  public getFromConfig = (name: string, options: { global?: boolean; cwd?: string } = {}): CollectionSpec | null => {
+    const { global: isGlobal, cwd = process.cwd() } = options;
+
+    if (isGlobal === true) {
+      const globalConfig = this.readGlobalConfig();
+      return globalConfig.collections[name] || null;
+    }
+
+    if (isGlobal === false) {
+      return this.getFromProjectConfig(name, cwd);
+    }
+
+    // If global is undefined, search local first then global
+    const localSpec = this.getFromProjectConfig(name, cwd);
+    if (localSpec) {
+      return localSpec;
+    }
+
+    const globalConfig = this.readGlobalConfig();
+    return globalConfig.collections[name] || null;
+  };
+
+  /**
+   * Get all collections from both local and global configs.
+   * Returns a map with collection name as key and spec + source info as value.
+   * Local collections take precedence over global ones with the same name.
+   */
+  public getAllCollections = (
+    cwd: string = process.cwd(),
+  ): Map<string, { spec: CollectionSpec; source: 'local' | 'global' }> => {
+    const result = new Map<string, { spec: CollectionSpec; source: 'local' | 'global' }>();
+
+    // Add global collections first
+    const globalConfig = this.readGlobalConfig();
+    for (const [name, spec] of Object.entries(globalConfig.collections)) {
+      result.set(name, { spec, source: 'global' });
+    }
+
+    // Add local collections (will override global ones with same name)
+    if (this.projectConfigExists(cwd)) {
+      const projectConfig = this.readProjectConfig(cwd);
+      for (const [name, spec] of Object.entries(projectConfig.collections)) {
+        result.set(name, { spec, source: 'local' });
+      }
+    }
+
+    return result;
   };
 
   // === Collection ID Computation ===

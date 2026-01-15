@@ -58,17 +58,18 @@ const createCollectionsCli = (command: Command) => {
     .command('add')
     .argument('<name>', 'Name/alias for the collection')
     .argument('<url>', 'Manifest or bundle URL (supports https://, file://, or relative paths)')
-    .description('Add a collection to the project config')
+    .description('Add a collection to project or global config')
+    .option('-g, --global', 'Add to global config instead of project config')
     .action(
-      withErrorHandling(async (name: string, url: string) => {
+      withErrorHandling(async (name: string, url: string, options: { global?: boolean }) => {
         const services = new Services();
         try {
           const collectionsService = services.get(CollectionsService);
 
-          if (!collectionsService.projectConfigExists()) {
+          if (!options.global && !collectionsService.projectConfigExists()) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const configFile = (config as any).get('project.configFile') as string;
-            formatError(`No ${configFile} found. Run 'collections init' first.`);
+            formatError(`No ${configFile} found. Run 'collections init' first, or use -g for global.`);
             return;
           }
 
@@ -79,8 +80,10 @@ const createCollectionsCli = (command: Command) => {
           }
 
           const spec: CollectionSpec = { url: normalizedUrl };
-          collectionsService.addToProjectConfig(name, spec);
-          formatSuccess(`Added collection "${name}" (${normalizedUrl})`);
+          collectionsService.addToConfig(name, spec, { global: options.global });
+
+          const scope = options.global ? 'global config' : 'project config';
+          formatSuccess(`Added collection "${name}" to ${scope} (${normalizedUrl})`);
         } finally {
           await services.destroy();
         }
@@ -91,25 +94,34 @@ const createCollectionsCli = (command: Command) => {
   command
     .command('remove')
     .argument('<name>', 'Name of the collection to remove')
-    .description('Remove a collection from project config')
+    .description('Remove a collection from project or global config')
+    .option('-g, --global', 'Remove from global config instead of project config')
     .option('--drop', 'Also drop indexed data from database')
     .action(
-      withErrorHandling(async (name: string, options: { drop?: boolean }) => {
+      withErrorHandling(async (name: string, options: { global?: boolean; drop?: boolean }) => {
         const services = new Services();
         const client = options.drop ? await createCliClient() : null;
         try {
           const collectionsService = services.get(CollectionsService);
 
-          if (!collectionsService.projectConfigExists()) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const configFile = (config as any).get('project.configFile') as string;
-            formatError(`No ${configFile} found.`);
-            return;
+          if (options.global) {
+            if (!collectionsService.globalConfigExists()) {
+              formatError('No global config found.');
+              return;
+            }
+          } else {
+            if (!collectionsService.projectConfigExists()) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const configFile = (config as any).get('project.configFile') as string;
+              formatError(`No ${configFile} found.`);
+              return;
+            }
           }
 
-          const spec = collectionsService.getFromProjectConfig(name);
+          const spec = collectionsService.getFromConfig(name, { global: options.global });
           if (!spec) {
-            formatError(`Collection "${name}" not found in project config.`);
+            const scope = options.global ? 'global config' : 'project config';
+            formatError(`Collection "${name}" not found in ${scope}.`);
             return;
           }
 
@@ -120,8 +132,9 @@ const createCollectionsCli = (command: Command) => {
             formatInfo(`Dropped indexed data for "${name}"`);
           }
 
-          collectionsService.removeFromProjectConfig(name);
-          formatSuccess(`Removed "${name}" from project config`);
+          collectionsService.removeFromConfig(name, { global: options.global });
+          const scope = options.global ? 'global config' : 'project config';
+          formatSuccess(`Removed "${name}" from ${scope}`);
         } finally {
           if (client) {
             await client.disconnect();
@@ -136,22 +149,41 @@ const createCollectionsCli = (command: Command) => {
     .command('list')
     .alias('ls')
     .description('List configured collections and their status')
+    .option('-g, --global', 'Show only global collections')
+    .option('--no-global', 'Show only local collections')
     .action(
-      withErrorHandling(async () => {
+      withErrorHandling(async (options: { global?: boolean }) => {
         const services = new Services();
         const client = await createCliClient();
         try {
           const collectionsService = services.get(CollectionsService);
 
-          if (!collectionsService.projectConfigExists()) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const configFile = (config as any).get('project.configFile') as string;
-            formatInfo(`No ${configFile} found. Run 'collections init' first.`);
-            return;
-          }
+          // Determine which collections to show
+          let entries: [string, CollectionSpec, 'local' | 'global'][] = [];
 
-          const projectConfig = collectionsService.readProjectConfig();
-          const entries = Object.entries(projectConfig.collections);
+          if (options.global === true) {
+            // Show only global
+            if (!collectionsService.globalConfigExists()) {
+              formatInfo('No global collections configured. Use "collections add -g" to add one.');
+              return;
+            }
+            const globalConfig = collectionsService.readGlobalConfig();
+            entries = Object.entries(globalConfig.collections).map(([name, spec]) => [name, spec, 'global']);
+          } else if (options.global === false) {
+            // Show only local
+            if (!collectionsService.projectConfigExists()) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const configFile = (config as any).get('project.configFile') as string;
+              formatInfo(`No ${configFile} found. Run 'collections init' first.`);
+              return;
+            }
+            const projectConfig = collectionsService.readProjectConfig();
+            entries = Object.entries(projectConfig.collections).map(([name, spec]) => [name, spec, 'local']);
+          } else {
+            // Show both (default)
+            const allCollections = collectionsService.getAllCollections();
+            entries = Array.from(allCollections.entries()).map(([name, { spec, source }]) => [name, spec, source]);
+          }
 
           if (entries.length === 0) {
             formatInfo('No collections configured. Use "collections add" to add one.');
@@ -161,31 +193,38 @@ const createCollectionsCli = (command: Command) => {
           formatHeader('Collections');
 
           const maxNameLen = Math.max(...entries.map(([name]) => name.length), 10);
-          const sourceLengths = entries.map(([, spec]) => spec.url.length);
-          const maxSourceLen = Math.min(Math.max(...sourceLengths, 20), 50);
+          const urlLengths = entries.map(([, spec]) => spec.url.length);
+          const maxUrlLen = Math.min(Math.max(...urlLengths, 20), 45);
+          const showSource = options.global === undefined; // Show source column when showing both
 
-          formatTableHeader([
+          const columns = [
             { name: 'Name', width: maxNameLen },
-            { name: 'URL', width: maxSourceLen },
+            { name: 'URL', width: maxUrlLen },
+            ...(showSource ? [{ name: 'Source', width: 8 }] : []),
             { name: 'Status', width: 14 },
-          ]);
+          ];
 
-          for (const [name, spec] of entries) {
+          formatTableHeader(columns);
+
+          for (const [name, spec, source] of entries) {
             const status = await client.collections.getSyncStatus({ spec });
             const statusText = status === 'synced' ? chalk.green('✓ synced') : chalk.yellow('⚠ not synced');
 
-            let source = spec.url;
-
-            // Truncate source if too long
-            if (source.length > maxSourceLen) {
-              source = source.substring(0, maxSourceLen - 3) + '...';
+            let url = spec.url;
+            if (url.length > maxUrlLen) {
+              url = url.substring(0, maxUrlLen - 3) + '...';
             }
 
-            formatTableRow([
+            const sourceColor = source === 'local' ? chalk.blue : chalk.magenta;
+
+            const row = [
               { value: name, width: maxNameLen, color: chalk.cyan },
-              { value: source, width: maxSourceLen, color: chalk.white },
+              { value: url, width: maxUrlLen, color: chalk.white },
+              ...(showSource ? [{ value: source, width: 8, color: sourceColor }] : []),
               { value: statusText, width: 14 },
-            ]);
+            ];
+
+            formatTableRow(row);
           }
 
           console.log();
@@ -201,76 +240,125 @@ const createCollectionsCli = (command: Command) => {
     .command('sync')
     .argument('[name]', 'Name of specific collection to sync (omit for all)')
     .description('Sync collection(s) from config')
+    .option('-g, --global', 'Sync only global collections')
+    .option('--no-global', 'Sync only local collections')
     .option('-f, --force', 'Re-index all documents (ignore hash cache)')
     .option('--dry-run', 'Show what would happen without making changes')
     .action(
-      withErrorHandling(async (name: string | undefined, options: { force?: boolean; dryRun?: boolean }) => {
-        const services = new Services();
-        try {
-          const collectionsService = services.get(CollectionsService);
+      withErrorHandling(
+        async (name: string | undefined, options: { global?: boolean; force?: boolean; dryRun?: boolean }) => {
+          const services = new Services();
+          try {
+            const collectionsService = services.get(CollectionsService);
 
-          if (!collectionsService.projectConfigExists()) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const configFile = (config as any).get('project.configFile') as string;
-            formatError(`No ${configFile} found. Run 'collections init' first.`);
-            return;
-          }
+            // Build list of collections to sync based on options
+            let toSync: [string, CollectionSpec, 'local' | 'global'][] = [];
 
-          const projectConfig = collectionsService.readProjectConfig();
+            if (name) {
+              // Syncing a specific collection by name
+              if (options.global === true) {
+                // Explicitly global
+                const spec = collectionsService.getFromConfig(name, { global: true });
+                if (!spec) {
+                  formatError(`Collection "${name}" not found in global config.`);
+                  return;
+                }
+                toSync = [[name, spec, 'global']];
+              } else if (options.global === false) {
+                // Explicitly local
+                const spec = collectionsService.getFromConfig(name, { global: false });
+                if (!spec) {
+                  formatError(`Collection "${name}" not found in project config.`);
+                  return;
+                }
+                toSync = [[name, spec, 'local']];
+              } else {
+                // Search local first, then global
+                const localSpec = collectionsService.getFromConfig(name, { global: false });
+                if (localSpec) {
+                  toSync = [[name, localSpec, 'local']];
+                } else {
+                  const globalSpec = collectionsService.getFromConfig(name, { global: true });
+                  if (globalSpec) {
+                    toSync = [[name, globalSpec, 'global']];
+                  } else {
+                    formatError(`Collection "${name}" not found in project or global config.`);
+                    return;
+                  }
+                }
+              }
+            } else {
+              // Syncing all collections
+              if (options.global === true) {
+                // Only global
+                if (!collectionsService.globalConfigExists()) {
+                  formatInfo('No global collections configured. Use "collections add -g" to add one.');
+                  return;
+                }
+                const globalConfig = collectionsService.readGlobalConfig();
+                toSync = Object.entries(globalConfig.collections).map(([n, spec]) => [n, spec, 'global']);
+              } else if (options.global === false) {
+                // Only local
+                if (!collectionsService.projectConfigExists()) {
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  const configFile = (config as any).get('project.configFile') as string;
+                  formatError(`No ${configFile} found. Run 'collections init' first.`);
+                  return;
+                }
+                const projectConfig = collectionsService.readProjectConfig();
+                toSync = Object.entries(projectConfig.collections).map(([n, spec]) => [n, spec, 'local']);
+              } else {
+                // Both local and global (default)
+                const allCollections = collectionsService.getAllCollections();
+                toSync = Array.from(allCollections.entries()).map(([n, { spec, source }]) => [n, spec, source]);
+              }
+            }
 
-          if (Object.keys(projectConfig.collections).length === 0) {
-            formatInfo('No collections configured. Use "collections add" to add one.');
-            return;
-          }
+            if (toSync.length === 0) {
+              formatInfo('No collections configured. Use "collections add" to add one.');
+              return;
+            }
 
-          const toSync = name
-            ? [[name, projectConfig.collections[name]] as const]
-            : Object.entries(projectConfig.collections);
-
-          if (name && !projectConfig.collections[name]) {
-            formatError(`Collection "${name}" not found in project config.`);
-            return;
-          }
-
-          // Handle dry-run mode separately
-          if (options.dryRun) {
-            formatWarning('Dry run mode - no changes will be made');
-            console.log();
-
-            for (const [collectionName] of toSync) {
-              console.log(chalk.bold(`Syncing ${collectionName}...`));
-              formatInfo('  Would sync this collection');
+            // Handle dry-run mode separately
+            if (options.dryRun) {
+              formatWarning('Dry run mode - no changes will be made');
               console.log();
+
+              for (const [collectionName, , source] of toSync) {
+                console.log(chalk.bold(`Syncing ${collectionName}`) + chalk.dim(` (${source})...`));
+                formatInfo('  Would sync this collection');
+                console.log();
+              }
+
+              console.log(chalk.green.bold('All collections synced.'));
+              return;
+            }
+
+            // Actually sync collections
+            const client = await createCliClient();
+            try {
+              for (const [collectionName, spec, source] of toSync) {
+                console.log(chalk.bold(`Syncing ${collectionName}`) + chalk.dim(` (${source})...`));
+
+                const result = await client.collections.sync({
+                  name: collectionName,
+                  spec,
+                  cwd: process.cwd(),
+                  force: options.force,
+                });
+
+                printSyncResult(collectionName, result);
+              }
+            } finally {
+              await client.disconnect();
             }
 
             console.log(chalk.green.bold('All collections synced.'));
-            return;
-          }
-
-          // Actually sync collections
-          const client = await createCliClient();
-          try {
-            for (const [collectionName, spec] of toSync) {
-              console.log(chalk.bold(`Syncing ${collectionName}...`));
-
-              const result = await client.collections.sync({
-                name: collectionName,
-                spec,
-                cwd: process.cwd(),
-                force: options.force,
-              });
-
-              printSyncResult(collectionName, result);
-            }
           } finally {
-            await client.disconnect();
+            await services.destroy();
           }
-
-          console.log(chalk.green.bold('All collections synced.'));
-        } finally {
-          await services.destroy();
-        }
-      }),
+        },
+      ),
     );
 
   // collections manifest (subcommand group)

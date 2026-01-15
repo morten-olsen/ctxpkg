@@ -27,7 +27,7 @@ Collection IDs are computed as `pkg:{normalized_url}`.
 
 ### Project Config (`context.json`)
 
-Maps user-friendly names to collection specs:
+Maps user-friendly names to collection specs (local to a project):
 
 ```json
 {
@@ -37,6 +37,20 @@ Maps user-friendly names to collection specs:
   }
 }
 ```
+
+### Global Config (`~/.config/ctxpkg/global-context.json`)
+
+Same structure as project config, but user-level (available across all projects):
+
+```json
+{
+  "collections": {
+    "typescript-docs": { "url": "https://example.com/ts-docs/manifest.json" }
+  }
+}
+```
+
+When resolving collection aliases, local takes precedence over global.
 
 ### Package Manifests
 
@@ -64,11 +78,18 @@ Sources can be `{ glob: [...] }` (local only) or `{ files: [...] }`.
 ┌─────────────────────────────────────────────────────────────┐
 │                   CollectionsService                        │
 ├─────────────────────────────────────────────────────────────┤
-│  Project Config        │  Sync Operations                   │
+│  Project Config        │  Global Config                     │
+│  ─────────────────     │  ─────────────────                 │
+│  readProjectConfig()   │  readGlobalConfig()                │
+│  writeProjectConfig()  │  writeGlobalConfig()               │
+│  projectConfigExists() │  globalConfigExists()              │
+├────────────────────────┼────────────────────────────────────┤
+│  Unified Config Ops    │  Sync Operations                   │
 │  ─────────────────     │  ────────────────                  │
-│  readProjectConfig()   │  syncCollection()                  │
-│  writeProjectConfig()  │  syncPkgCollection()               │
-│  addToProjectConfig()  │  syncBundleCollection()            │
+│  addToConfig()         │  syncCollection()                  │
+│  removeFromConfig()    │  syncPkgCollection()               │
+│  getFromConfig()       │  syncBundleCollection()            │
+│  getAllCollections()   │                                    │
 ├────────────────────────┼────────────────────────────────────┤
 │  Collection IDs        │  Manifest Handling                 │
 │  ─────────────────     │  ────────────────────              │
@@ -83,6 +104,12 @@ Sources can be `{ glob: [...] }` (local only) or `{ files: [...] }`.
                     │ DocumentsService │  (stores documents)
                     └──────────────────┘
 ```
+
+**Unified Config Operations:**
+- `addToConfig(name, spec, { global })` - Add to project or global config
+- `removeFromConfig(name, { global })` - Remove from project or global config
+- `getFromConfig(name, { global })` - Get spec (if global undefined, searches local then global)
+- `getAllCollections()` - Get all collections from both configs with source indicators
 
 ## Sync Flow
 

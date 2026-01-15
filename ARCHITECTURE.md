@@ -49,9 +49,18 @@ The heart of the application — package manager for AI context.
 **Key Concepts:**
 
 - **Project Config** (`context.json`): Per-project file mapping aliases to collection specs
+- **Global Config** (`~/.config/ctxpkg/global-context.json`): User-level collections available across all projects
 - **Manifest** (`manifest.json`): Package definition with name, version, and sources
 - **Bundle** (`.tar.gz`): Distributable archive with manifest and files
 - **Collection ID**: Unique identifier (`pkg:{url}`)
+
+**Local vs Global Collections:**
+
+Collections can be scoped locally (per-project) or globally (user-level):
+- Local collections are stored in `context.json` in the project directory
+- Global collections are stored in `~/.config/ctxpkg/global-context.json`
+- When resolving aliases, local takes precedence over global
+- CLI commands support `-g` flag for global operations and `--no-global` to exclude global collections
 
 **Sync Process:**
 
@@ -251,10 +260,10 @@ Uses `convict` for configuration:
 
 ```typescript
 {
-  database: { path: '~/.local/share/ai-assist/database.sqlite' },
+  database: { path: '~/.local/share/ctxpkg/database.sqlite' },
   daemon: { socketPath, pidFile, idleTimeout, autoStart },
-  documents: { defaultCollections: [] },
-  project: { configFile: 'context.json' }
+  project: { configFile: 'context.json' },
+  global: { configFile: '~/.config/ctxpkg/global-context.json' }
 }
 ```
 

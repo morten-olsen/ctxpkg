@@ -37,6 +37,9 @@ ctxpkg col add project-docs ./docs/manifest.json
 # Add a remote package
 ctxpkg col add react https://example.com/react-docs/v18/manifest.json
 
+# Add a global collection (available across all projects)
+ctxpkg col add -g typescript-docs https://example.com/ts-docs/manifest.json
+
 # Sync all collections (index documents)
 ctxpkg col sync
 
@@ -48,7 +51,7 @@ ctxpkg docs search "how to handle authentication"
 
 ### Collection Commands
 
-Manage context collections as packages.
+Manage context collections as packages. Collections can be **local** (project-specific, stored in `context.json`) or **global** (user-level, available across all projects).
 
 ```bash
 # Initialize project config (creates context.json)
@@ -61,32 +64,41 @@ ctxpkg col add react https://example.com/manifest.json  # Remote package
 ctxpkg col add lib file://../shared/manifest.json       # Local package (explicit file://)
 ctxpkg col add bundle https://example.com/bundle.tar.gz # Remote bundle
 
+# Add global collections (available across all projects)
+ctxpkg col add -g typescript-docs https://example.com/ts-docs/manifest.json
+ctxpkg col add -g personal-notes file:///Users/me/notes/manifest.json
+
 # List configured collections and sync status
-ctxpkg col list
-ctxpkg col ls
+ctxpkg col list              # List both local and global (with source indicator)
+ctxpkg col list -g           # List global collections only
+ctxpkg col list --no-global  # List local collections only
 
 # Sync collections (index documents)
-ctxpkg col sync           # Sync all
-ctxpkg col sync react     # Sync specific collection
-ctxpkg col sync --force   # Re-index everything
+ctxpkg col sync              # Sync all (local + global)
+ctxpkg col sync react        # Sync specific collection
+ctxpkg col sync -g           # Sync global collections only
+ctxpkg col sync --no-global  # Sync local collections only
+ctxpkg col sync --force      # Re-index everything
 
 # Remove a collection
 ctxpkg col remove react
-ctxpkg col remove react --drop  # Also delete indexed data
+ctxpkg col remove -g typescript-docs   # Remove from global config
+ctxpkg col remove react --drop         # Also delete indexed data
 ```
 
 ### Document Commands
 
-Query indexed documents.
+Query indexed documents. By default, searches include both local and global collections.
 
 ```bash
 # List indexed collections
 ctxpkg docs ls
 
-# Search documents
+# Search documents (searches local + global by default)
 ctxpkg docs search "authentication flow"
 ctxpkg docs search "error handling" -c project-docs -l 5
 ctxpkg docs search "hooks" --collections react lodash --limit 20
+ctxpkg docs search "query" --no-global   # Exclude global collections
 
 # Interactive search
 ctxpkg docs isearch
@@ -117,12 +129,15 @@ See [Distributing Collections via GitHub Releases](docs/github-distribution.md) 
 Expose reference tools via Model Context Protocol for AI editor integration.
 
 ```bash
-# Start MCP server with document tools
+# Start MCP server with document tools (includes local + global collections)
 ctxpkg mcp documents
 ctxpkg mcp docs
 
 # Limit to specific collections
 ctxpkg mcp docs -c project-docs react
+
+# Exclude global collections
+ctxpkg mcp docs --no-global
 ```
 
 **MCP Client Configuration:**
@@ -158,9 +173,11 @@ ctxpkg daemon status   # Show daemon status
 ctxpkg daemon restart  # Restart daemon
 ```
 
-## Project Configuration
+## Configuration
 
-Projects use a `context.json` file to declare their collections:
+### Project Configuration
+
+Projects use a `context.json` file to declare their local collections:
 
 ```json
 {
@@ -177,6 +194,27 @@ Projects use a `context.json` file to declare their collections:
   }
 }
 ```
+
+### Global Configuration
+
+Global collections are stored in `~/.config/ctxpkg/global-context.json` (Linux/macOS) and are available across all projects:
+
+```json
+{
+  "collections": {
+    "typescript-docs": {
+      "url": "https://example.com/ts-docs/manifest.json"
+    },
+    "personal-notes": {
+      "url": "file:///Users/me/notes/manifest.json"
+    }
+  }
+}
+```
+
+The global config is auto-created when you first add a global collection with `ctxpkg col add -g`.
+
+**Resolution order**: When both local and global configs have a collection with the same alias, the local collection takes precedence.
 
 ## Package Manifest Format
 

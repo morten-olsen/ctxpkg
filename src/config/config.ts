@@ -54,6 +54,14 @@ const config = convict({
       env: 'CTXPKG_PROJECT_CONFIG_FILE',
     },
   },
+  global: {
+    configFile: {
+      doc: 'Path to global collections config file',
+      format: String,
+      default: join(paths.config, 'global-context.json'),
+      env: 'CTXPKG_GLOBAL_CONFIG_FILE',
+    },
+  },
 });
 
 // Ensure config directory exists for future writes, but don't fail if we can't read yet

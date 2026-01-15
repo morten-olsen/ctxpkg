@@ -6,7 +6,6 @@ import {
   formatSuccess,
   formatError,
   formatInfo,
-  formatWarning,
   formatTableHeader,
   formatTableRow,
   withErrorHandling,
@@ -124,52 +123,14 @@ const createDocumentsCli = (command: Command) => {
       }),
     );
 
-  // Update collection from glob command (DEPRECATED)
-  command
-    .command('update-collection')
-    .alias('update')
-    .description('[DEPRECATED] Update a collection from files - use "collections add" + "collections sync" instead')
-    .option('-p, --pattern <pattern>', 'Glob pattern to match files (e.g., "**/*.md")', '**/*.md')
-    .option('-c, --collection <name>', 'Collection name (defaults to cwd)')
-    .option('-d, --cwd <directory>', 'Working directory for glob pattern', process.cwd())
-    .action(
-      withErrorHandling(async (options: { pattern: string; collection?: string; cwd: string }) => {
-        formatWarning('This command is deprecated. Use "collections add" + "collections sync" instead.');
-        console.log();
-
-        const client = await createCliClient();
-        try {
-          const collectionName = options.collection || options.cwd;
-
-          formatHeader('Updating Collection');
-          formatInfo(`Pattern: ${chalk.cyan(options.pattern)}`);
-          formatInfo(`Directory: ${chalk.cyan(options.cwd)}`);
-          formatInfo(`Collection: ${chalk.cyan(collectionName)}`);
-          console.log();
-
-          console.log(chalk.dim('Processing files...'));
-
-          await client.documents.updateCollection({
-            pattern: options.pattern,
-            cwd: options.cwd,
-            collection: collectionName,
-          });
-
-          formatSuccess('Collection updated successfully.');
-        } finally {
-          await client.disconnect();
-        }
-      }),
-    );
-
   // Search command
   command
     .command('search')
     .description('Search for documents in reference collections using hybrid semantic + keyword search')
     .argument('<query>', 'Search query')
-    .option('-c, --collections <names...>', 'Limit search to specific collections (can be aliases from context.json)')
+    .option('-c, --collections <names...>', 'Limit search to specific collections (can be aliases)')
+    .option('--no-global', 'Exclude global collections from search')
     .option('-l, --limit <number>', 'Maximum number of results', '10')
-    .option('--no-default', 'Do not include default collections in search')
     .option('--max-distance <number>', 'Maximum distance threshold (0-2, lower = stricter)')
     .option('--no-hybrid', 'Disable hybrid search (use pure vector search)')
     .option('--rerank', 'Enable re-ranking for higher precision (slower)')
@@ -179,6 +140,7 @@ const createDocumentsCli = (command: Command) => {
           query: string,
           options: {
             collections?: string[];
+            global: boolean;
             limit: string;
             default: boolean;
             maxDistance?: string;
@@ -192,28 +154,65 @@ const createDocumentsCli = (command: Command) => {
             const collectionsService = services.get(CollectionsService);
 
             // Helper to resolve alias to collection ID
-            const resolveCollection = (name: string): string => {
-              // Try to resolve as alias from project config
-              const spec = collectionsService.getFromProjectConfig(name);
-              if (spec) {
-                return collectionsService.computeCollectionId(spec);
+            const resolveCollection = (name: string, includeGlobal: boolean): string => {
+              // Try to resolve as alias (local first, then global if allowed)
+              if (includeGlobal) {
+                const spec = collectionsService.getFromConfig(name);
+                if (spec) {
+                  return collectionsService.computeCollectionId(spec);
+                }
+              } else {
+                const spec = collectionsService.getFromConfig(name, { global: false });
+                if (spec) {
+                  return collectionsService.computeCollectionId(spec);
+                }
               }
               // Return as-is (might be a raw collection ID or path)
               return name;
             };
 
-            const collectionsSet = new Set<string>();
-            if (options.collections) {
+            let collectionsToSearch: string[] = [];
+            const includeGlobal = options.global !== false;
+
+            if (options.collections && options.collections.length > 0) {
+              // Explicit collections provided - resolve aliases
+              const collectionsSet = new Set<string>();
               for (const c of options.collections) {
-                collectionsSet.add(resolveCollection(c));
+                collectionsSet.add(resolveCollection(c, includeGlobal));
               }
+              collectionsToSearch = Array.from(collectionsSet);
+            } else {
+              // No explicit collections - default to all from local + global configs
+              const allCollections = includeGlobal
+                ? collectionsService.getAllCollections()
+                : new Map(
+                    Object.entries(collectionsService.readProjectConfig().collections).map(([name, spec]) => [
+                      name,
+                      { spec, source: 'local' as const },
+                    ]),
+                  );
+
+              if (allCollections.size === 0) {
+                formatError('No collections configured. Use "collections add" to add one.');
+                return;
+              }
+
+              collectionsToSearch = Array.from(allCollections.values()).map(({ spec }) =>
+                collectionsService.computeCollectionId(spec),
+              );
             }
-            const collectionsToSearch = Array.from(collectionsSet);
 
             formatHeader('Search Results');
             formatInfo(`Query: ${chalk.cyan(query)}`);
-            if (collectionsToSearch) {
-              formatInfo(`Collections: ${chalk.cyan(collectionsToSearch.join(', '))}`);
+            if (collectionsToSearch.length > 0) {
+              const displayCollections =
+                collectionsToSearch.length > 3
+                  ? `${collectionsToSearch.slice(0, 3).join(', ')} (+${collectionsToSearch.length - 3} more)`
+                  : collectionsToSearch.join(', ');
+              formatInfo(`Collections: ${chalk.cyan(displayCollections)}`);
+            }
+            if (!includeGlobal) {
+              formatInfo(`Scope: ${chalk.cyan('local only')}`);
             }
             if (!options.hybrid) {
               formatInfo(`Mode: ${chalk.cyan('vector-only (hybrid disabled)')}`);
@@ -244,10 +243,10 @@ const createDocumentsCli = (command: Command) => {
 
               console.log(
                 chalk.bold.white(`${i + 1}.`) +
-                ' ' +
-                chalk.cyan(result.document) +
-                chalk.dim(' in ') +
-                chalk.magenta(result.collection),
+                  ' ' +
+                  chalk.cyan(result.document) +
+                  chalk.dim(' in ') +
+                  chalk.magenta(result.collection),
               );
               const scoreInfo =
                 result.score !== undefined
@@ -293,42 +292,51 @@ const createDocumentsCli = (command: Command) => {
             return;
           }
 
-          // Build a map of collection ID → alias from project config
-          const idToAlias = new Map<string, string>();
-          if (collectionsService.projectConfigExists()) {
-            const projectConfig = collectionsService.readProjectConfig();
-            for (const [alias, spec] of Object.entries(projectConfig.collections)) {
-              const id = collectionsService.computeCollectionId(spec);
-              idToAlias.set(id, alias);
-            }
+          // Build a map of collection ID → {alias, source} from both configs
+          const idToInfo = new Map<string, { alias: string; source: 'local' | 'global' }>();
+          const allCollections = collectionsService.getAllCollections();
+          for (const [alias, { spec, source }] of allCollections) {
+            const id = collectionsService.computeCollectionId(spec);
+            idToInfo.set(id, { alias, source });
           }
 
           formatHeader('Interactive Search');
 
-          // Sort collections: aliased (from project config) first, then others
+          // Sort collections: local first, then global, then unaliased
           const sortedCollections = [...collections].sort((a, b) => {
-            const aHasAlias = idToAlias.has(a.collection);
-            const bHasAlias = idToAlias.has(b.collection);
-            if (aHasAlias && !bHasAlias) return -1;
-            if (!aHasAlias && bHasAlias) return 1;
-            // If both have aliases, sort by alias name
-            if (aHasAlias && bHasAlias) {
-              return (idToAlias.get(a.collection) || '').localeCompare(idToAlias.get(b.collection) || '');
+            const aInfo = idToInfo.get(a.collection);
+            const bInfo = idToInfo.get(b.collection);
+
+            // Collections with aliases come before those without
+            if (aInfo && !bInfo) return -1;
+            if (!aInfo && bInfo) return 1;
+
+            // Both have aliases - sort by source (local first) then alias name
+            if (aInfo && bInfo) {
+              if (aInfo.source !== bInfo.source) {
+                return aInfo.source === 'local' ? -1 : 1;
+              }
+              return aInfo.alias.localeCompare(bInfo.alias);
             }
-            // Otherwise keep original order
+
+            // Neither has alias - keep original order
             return 0;
           });
 
-          // Select collections to search - show alias if available
+          // Select collections to search - show alias and source indicator
           const selectedCollections = await select({
             message: 'Search in:',
             choices: [
               { name: 'All collections', value: undefined },
               ...sortedCollections.map((c) => {
-                const alias = idToAlias.get(c.collection);
-                const displayName = alias
-                  ? `${alias} (${c.document_count} docs)`
-                  : `${c.collection} (${c.document_count} docs)`;
+                const info = idToInfo.get(c.collection);
+                let displayName: string;
+                if (info) {
+                  const sourceIndicator = info.source === 'local' ? 'local' : 'global';
+                  displayName = `${info.alias} (${sourceIndicator}, ${c.document_count} docs)`;
+                } else {
+                  displayName = `${c.collection} (${c.document_count} docs)`;
+                }
                 return {
                   name: displayName,
                   value: c.collection,
@@ -372,10 +380,10 @@ const createDocumentsCli = (command: Command) => {
 
             console.log(
               chalk.bold.white(`${i + 1}.`) +
-              ' ' +
-              chalk.cyan(result.document) +
-              chalk.dim(' in ') +
-              chalk.magenta(result.collection),
+                ' ' +
+                chalk.cyan(result.document) +
+                chalk.dim(' in ') +
+                chalk.magenta(result.collection),
             );
             const scoreInfo =
               result.score !== undefined
