@@ -237,6 +237,111 @@ Or with explicit file list and hashes:
 4. **Search** uses vector similarity to find relevant content
 5. **MCP integration** exposes search to AI agents and editors
 
+## Indexing & Search
+
+### How Documents Are Indexed
+
+When you sync a collection, documents go through the following pipeline:
+
+```
+Document → Token Chunking → Context Enrichment → Embedding → Storage
+```
+
+**1. Token-Based Chunking**
+
+Documents are split into chunks of ~400 tokens with 80 token overlap:
+
+- Uses `cl100k_base` tokenizer for accurate token counting
+- Overlap preserves context at chunk boundaries
+- Sized to fit within the embedding model's 512-token limit
+
+**2. Context Enrichment**
+
+Each chunk is enriched with document context before embedding:
+
+```
+Document: {document title}
+Section: {nearest heading}
+
+{chunk content}
+```
+
+This helps the embedding model understand what each chunk is about, improving retrieval accuracy.
+
+**3. Embedding**
+
+Chunks are embedded using `mixedbread-ai/mxbai-embed-large-v1`:
+
+- 1024-dimensional vectors
+- Instruction-based embeddings (different prompts for indexing vs searching)
+- Runs locally via transformers.js (no API calls)
+
+**4. Storage**
+
+Indexed data is stored in SQLite with:
+
+- **Vector table**: Chunk embeddings for similarity search (via sqlite-vec)
+- **FTS5 table**: Chunk text for keyword search
+
+### How Search Works
+
+Search combines multiple strategies for better results:
+
+```
+Query → Query Embedding → Hybrid Search → Rank Fusion → (Optional Re-rank) → Results
+```
+
+**1. Hybrid Search (default)**
+
+Queries run against both indexes simultaneously:
+
+| Method | What it finds |
+|--------|---------------|
+| Vector search | Semantically similar content (cosine distance) |
+| Keyword search | Exact term matches (FTS5 BM25) |
+
+**2. Reciprocal Rank Fusion (RRF)**
+
+Results from both methods are merged using RRF, which combines rankings without requiring score normalization. Documents appearing in both result sets get boosted.
+
+**3. Optional Re-ranking**
+
+With `--rerank`, top candidates are re-scored using a secondary embedding model for higher precision.
+
+### Search Options
+
+```bash
+# Basic search
+ctxpkg ref search "authentication flow"
+
+# Filter by collection
+ctxpkg ref search "hooks" -c react
+
+# Limit results
+ctxpkg ref search "error handling" -l 5
+
+# Filter out low-quality matches (distance 0-2, lower = better)
+ctxpkg ref search "query" --max-distance 0.8
+
+# Disable hybrid search (vector-only)
+ctxpkg ref search "query" --no-hybrid
+
+# Enable re-ranking for higher precision
+ctxpkg ref search "query" --rerank
+```
+
+### Understanding Results
+
+```
+1. getting-started.md in project-docs
+   Score: 0.0327 | Distance: 0.4521
+```
+
+| Metric | Meaning |
+|--------|---------|
+| **Distance** | Cosine distance (0 = identical, 2 = opposite). < 0.5 is good, < 1.0 is relevant |
+| **Score** | Combined ranking score from hybrid search (higher = better) |
+
 ## Development
 
 ```bash
