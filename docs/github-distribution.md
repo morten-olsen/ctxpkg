@@ -552,6 +552,82 @@ done
 - **Test locally first**: Run `ctxpkg col pack` locally before pushing to verify the manifest works
 - **Pin versions for stability**: Consumers should pin to specific versions in production
 
+## Private Repositories
+
+For private repositories, consumers need to authenticate when downloading collection bundles. ctxpkg supports netrc-based authentication.
+
+### Using netrc
+
+Create or edit `~/.netrc` with credentials for your git host:
+
+```
+machine github.com
+  login your-username
+  password ghp_your_personal_access_token
+
+machine code.example.com
+  login your-username
+  password your-token
+```
+
+Secure the file:
+
+```bash
+chmod 600 ~/.netrc
+```
+
+ctxpkg will automatically use these credentials when fetching packages from matching hosts.
+
+### GitHub Personal Access Tokens
+
+For GitHub private repositories, create a personal access token:
+
+1. Go to **Settings > Developer settings > Personal access tokens > Tokens (classic)**
+2. Click **Generate new token (classic)**
+3. Select scope: `repo` (for full access to private repos)
+4. Copy the token and add it to `~/.netrc`
+
+For fine-grained tokens:
+1. Go to **Settings > Developer settings > Personal access tokens > Fine-grained tokens**
+2. Select the repository and grant **Contents: Read-only** permission
+3. Copy the token and add it to `~/.netrc`
+
+### CI/CD with Private Collections
+
+When your CI needs to install private collections, configure netrc in your workflow:
+
+```yaml
+- name: Configure netrc for private packages
+  run: |
+    cat << EOF > ~/.netrc
+    machine github.com
+      login ${{ github.actor }}
+      password ${{ secrets.PACKAGE_READ_TOKEN }}
+    EOF
+    chmod 600 ~/.netrc
+
+- name: Sync collections
+  run: ctxpkg col sync
+```
+
+Create a repository secret `PACKAGE_READ_TOKEN` with a token that has read access to the private collection repositories.
+
+### Alternative: Environment Variables
+
+For one-off installs without modifying netrc, you can use the GitHub API directly:
+
+```bash
+# Download private release asset via GitHub API
+curl -L \
+  -H "Accept: application/octet-stream" \
+  -H "Authorization: Bearer $GITHUB_TOKEN" \
+  "https://api.github.com/repos/OWNER/REPO/releases/assets/ASSET_ID" \
+  -o bundle.tar.gz
+
+# Then install from local file
+ctxpkg col add my-pkg file://./bundle.tar.gz
+```
+
 ## Troubleshooting
 
 ### Bundle is empty or missing files
@@ -581,4 +657,4 @@ If cloning fails, check that the repository URL is correct and accessible.
 
 - Verify the release is published (not draft)
 - Check the asset filename matches exactly (case-sensitive)
-- Ensure the repository is public, or use a token for private repos
+- For private repositories, ensure netrc is configured (see [Private Repositories](#private-repositories))
