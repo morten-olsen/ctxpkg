@@ -52,10 +52,7 @@ const pingResponseSchema = z.object({
 // Collections schemas
 const syncCollectionParamsSchema = z.object({
   name: z.string(),
-  spec: z.discriminatedUnion('type', [
-    z.object({ type: z.literal('file'), path: z.string(), glob: z.string() }),
-    z.object({ type: z.literal('pkg'), url: z.string() }),
-  ]),
+  spec: z.object({ url: z.string() }),
   cwd: z.string(),
   force: z.boolean().optional(),
 });
@@ -73,7 +70,9 @@ type SyncResult = z.infer<typeof syncResultSchema>;
 
 const collectionRecordInfoSchema = z.object({
   id: z.string(),
-  type: z.enum(['file', 'pkg']),
+  url: z.string(),
+  name: z.string().nullable(),
+  version: z.string().nullable(),
   lastSyncAt: z.string().nullable(),
 });
 

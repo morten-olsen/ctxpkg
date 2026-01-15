@@ -36,7 +36,7 @@ const createMcpCli = (command: Command) => {
             if (collectionsService.projectConfigExists(cwd)) {
               const projectConfig = collectionsService.readProjectConfig(cwd);
               for (const [alias, spec] of Object.entries(projectConfig.collections)) {
-                const collectionId = collectionsService.computeCollectionId(spec, cwd);
+                const collectionId = collectionsService.computeCollectionId(spec);
                 aliasMap.set(alias, collectionId);
               }
             }

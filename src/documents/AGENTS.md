@@ -83,7 +83,7 @@ The documents module handles document storage, chunking, embedding, and semantic
 
 ```typescript
 type ReferenceDocument = {
-  collection: string;  // Collection ID (e.g., "file:abc123" or "pkg:https://...")
+  collection: string;  // Collection ID (e.g., "pkg:https://example.com/manifest.json")
   id: string;          // Document ID within collection (e.g., "intro.md")
   content: string;     // Full document content
 };

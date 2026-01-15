@@ -2,25 +2,14 @@ import { z } from 'zod';
 
 // === Project Config (context.json) ===
 
-const fileSpecSchema = z.object({
-  type: z.literal('file'),
-  path: z.string(),
-  glob: z.string().default('**/*.md'),
-});
-
-const pkgSpecSchema = z.object({
-  type: z.literal('pkg'),
+const collectionSpecSchema = z.object({
   url: z.string(),
 });
-
-const collectionSpecSchema = z.discriminatedUnion('type', [fileSpecSchema, pkgSpecSchema]);
 
 const projectConfigSchema = z.object({
   collections: z.record(z.string(), collectionSpecSchema).default({}),
 });
 
-type FileSpec = z.infer<typeof fileSpecSchema>;
-type PkgSpec = z.infer<typeof pkgSpecSchema>;
 type CollectionSpec = z.infer<typeof collectionSpecSchema>;
 type ProjectConfig = z.infer<typeof projectConfigSchema>;
 
@@ -68,10 +57,10 @@ type Manifest = z.infer<typeof manifestSchema>;
 
 const collectionRecordSchema = z.object({
   id: z.string(),
-  type: z.enum(['file', 'pkg']),
-  path: z.string().nullable(),
-  glob: z.string().nullable(),
-  url: z.string().nullable(),
+  url: z.string(),
+  name: z.string().nullable(),
+  version: z.string().nullable(),
+  description: z.string().nullable(),
   manifest_hash: z.string().nullable(),
   last_sync_at: z.string().nullable(),
   created_at: z.string(),
@@ -98,17 +87,7 @@ const isFileSources = (sources: ManifestSources): sources is FileSources => {
   return 'files' in sources;
 };
 
-const isFileSpec = (spec: CollectionSpec): spec is FileSpec => {
-  return spec.type === 'file';
-};
-
-const isPkgSpec = (spec: CollectionSpec): spec is PkgSpec => {
-  return spec.type === 'pkg';
-};
-
 export type {
-  FileSpec,
-  PkgSpec,
   CollectionSpec,
   ProjectConfig,
   GlobSources,
@@ -122,8 +101,6 @@ export type {
 };
 
 export {
-  fileSpecSchema,
-  pkgSpecSchema,
   collectionSpecSchema,
   projectConfigSchema,
   globSourcesSchema,
@@ -135,6 +112,4 @@ export {
   collectionRecordSchema,
   isGlobSources,
   isFileSources,
-  isFileSpec,
-  isPkgSpec,
 };

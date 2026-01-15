@@ -7,7 +7,7 @@ This document provides guidelines for AI agents working on this codebase.
 **ctxpkg** is a package manager for AI agent context — it helps manage, sync, and distribute reference documentation collections that AI agents can use for context. Think of it as "npm for AI context".
 
 **Core features:**
-- Collection package management (local files and remote packages)
+- Collection package management (local and remote manifest-based packages)
 - Semantic search over indexed documents
 - MCP server integration for AI tools and editors
 
@@ -132,7 +132,7 @@ pnpm run build
 3. **Async in Commander**: Actions must be async functions, Commander handles promises
 4. **sqlite-vec**: Loaded via `pool.afterCreate` hook, vectors stored as JSON strings
 5. **ESM**: Project uses ES modules, use `.ts` extensions in imports
-6. **Collection IDs**: `file:{hash}` for local, `pkg:{url}` for packages — computed, not user-assigned
+6. **Collection IDs**: Format is `pkg:{url}` — computed from the manifest URL, not user-assigned
 7. **Aliases are project-local**: The `name` in `context.json` is an alias, not stored in DB
 
 ## Code Quality

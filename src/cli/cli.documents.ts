@@ -1,8 +1,6 @@
 import type { Command } from 'commander';
 import { select, confirm, input } from '@inquirer/prompts';
 
-import { config } from '../config/config.ts';
-
 import {
   formatHeader,
   formatSuccess,
@@ -204,26 +202,13 @@ const createDocumentsCli = (command: Command) => {
               return name;
             };
 
-            // Merge specified collections with default collections and cwd (unless --no-default is set)
-            const defaultCollections = config.get('documents.defaultCollections') as string[];
-            let collectionsToSearch: string[] | undefined;
-
-            if (options.collections || options.default) {
-              const collectionsSet = new Set<string>();
-              if (options.default) {
-                // Always include cwd as a default collection
-                collectionsSet.add(process.cwd());
-                for (const c of defaultCollections) {
-                  collectionsSet.add(resolveCollection(c));
-                }
+            const collectionsSet = new Set<string>();
+            if (options.collections) {
+              for (const c of options.collections) {
+                collectionsSet.add(resolveCollection(c));
               }
-              if (options.collections) {
-                for (const c of options.collections) {
-                  collectionsSet.add(resolveCollection(c));
-                }
-              }
-              collectionsToSearch = collectionsSet.size > 0 ? [...collectionsSet] : undefined;
             }
+            const collectionsToSearch = Array.from(collectionsSet);
 
             formatHeader('Search Results');
             formatInfo(`Query: ${chalk.cyan(query)}`);
@@ -259,10 +244,10 @@ const createDocumentsCli = (command: Command) => {
 
               console.log(
                 chalk.bold.white(`${i + 1}.`) +
-                  ' ' +
-                  chalk.cyan(result.document) +
-                  chalk.dim(' in ') +
-                  chalk.magenta(result.collection),
+                ' ' +
+                chalk.cyan(result.document) +
+                chalk.dim(' in ') +
+                chalk.magenta(result.collection),
               );
               const scoreInfo =
                 result.score !== undefined
@@ -387,10 +372,10 @@ const createDocumentsCli = (command: Command) => {
 
             console.log(
               chalk.bold.white(`${i + 1}.`) +
-                ' ' +
-                chalk.cyan(result.document) +
-                chalk.dim(' in ') +
-                chalk.magenta(result.collection),
+              ' ' +
+              chalk.cyan(result.document) +
+              chalk.dim(' in ') +
+              chalk.magenta(result.collection),
             );
             const scoreInfo =
               result.score !== undefined

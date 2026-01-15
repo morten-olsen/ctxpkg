@@ -1,9 +1,7 @@
 {
   "collections": {
     "project-docs": {
-      "type": "file",
-      "path": ".",
-      "glob": "**/*.md"
+      "url": "file://./manifest.json"
     }
   }
 }

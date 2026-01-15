@@ -6,8 +6,7 @@ A package manager for AI agent context — manage, sync, and distribute referenc
 
 `ctxpkg` helps you manage contextual documentation that AI agents can use to understand your codebase, frameworks, and organizational standards. Think of it as "npm for AI context":
 
-- **Local collections**: Index local documentation with glob patterns
-- **Package collections**: Install from remote manifests or bundles
+- **Package collections**: Install from local or remote manifests/bundles
 - **Versioning**: Pin to specific versions via URL
 - **Sharing**: Create distributable packages for your team or the community
 - **Semantic search**: Query indexed documents with natural language
@@ -32,8 +31,8 @@ npm link
 # Initialize a project config
 ctxpkg col init
 
-# Add local documentation
-ctxpkg col add project-docs ./docs
+# Add a local package (requires manifest.json in the directory)
+ctxpkg col add project-docs ./docs/manifest.json
 
 # Add a remote package
 ctxpkg col add react https://example.com/react-docs/v18/manifest.json
@@ -56,14 +55,11 @@ Manage context collections as packages.
 ctxpkg collections init
 ctxpkg col init
 
-# Add collections
-ctxpkg col add project-docs ./docs                    # Local files
+# Add collections (all collections use manifest-based packages)
+ctxpkg col add project-docs ./docs/manifest.json        # Local package
 ctxpkg col add react https://example.com/manifest.json  # Remote package
-ctxpkg col add lib file://../shared/manifest.json     # Local package
-
-# Add with explicit options
-ctxpkg col add my-docs --type file --path ./docs --glob "**/*.md"
-ctxpkg col add lib --type pkg --url https://example.com/bundle.tar.gz
+ctxpkg col add lib file://../shared/manifest.json       # Local package (explicit file://)
+ctxpkg col add bundle https://example.com/bundle.tar.gz # Remote bundle
 
 # List configured collections and sync status
 ctxpkg col list
@@ -170,16 +166,12 @@ Projects use a `context.json` file to declare their collections:
 {
   "collections": {
     "project-docs": {
-      "type": "file",
-      "path": "./docs",
-      "glob": "**/*.md"
+      "url": "file://./docs/manifest.json"
     },
     "react": {
-      "type": "pkg",
       "url": "https://example.com/react-docs/v18/manifest.json"
     },
     "org-standards": {
-      "type": "pkg",
       "url": "file://../shared/standards/manifest.json"
     }
   }

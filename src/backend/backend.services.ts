@@ -59,22 +59,20 @@ const createBackendServices = (services: Services, getStatus: () => { uptime: nu
       const records = await colService.listCollections();
       return records.map((r) => ({
         id: r.id,
-        type: r.type,
+        url: r.url,
+        name: r.name,
+        version: r.version,
         lastSyncAt: r.last_sync_at,
       }));
     }),
 
     getSyncStatus: procedure(
       z.object({
-        spec: z.discriminatedUnion('type', [
-          z.object({ type: z.literal('file'), path: z.string(), glob: z.string() }),
-          z.object({ type: z.literal('pkg'), url: z.string() }),
-        ]),
-        cwd: z.string(),
+        spec: z.object({ url: z.string() }),
       }),
       async (params): Promise<'synced' | 'not_synced' | 'stale'> => {
         const colService = services.get(CollectionsService);
-        return colService.getSyncStatus(params.spec, params.cwd);
+        return colService.getSyncStatus(params.spec);
       },
     ),
 

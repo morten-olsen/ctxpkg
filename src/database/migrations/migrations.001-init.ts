@@ -11,14 +11,12 @@ const init: Migration = {
   up: async (knex) => {
     await knex.schema.createTable(tableNames.collections, (table) => {
       table.string('id').primary();
-      table.string('type').notNullable(); // 'file' or 'pkg'
+      table.text('url').notNullable();
 
-      // file type fields
-      table.string('path').nullable();
-      table.string('glob').nullable();
-
-      // pkg type fields
-      table.text('url').nullable();
+      // manifest metadata
+      table.string('name').nullable();
+      table.string('version').nullable();
+      table.text('description').nullable();
       table.string('manifest_hash').nullable();
 
       // sync state
@@ -26,8 +24,6 @@ const init: Migration = {
 
       table.string('created_at').notNullable();
       table.string('updated_at').notNullable();
-
-      table.index(['type']);
     });
 
     await knex.schema.createTable(tableNames.referenceDocuments, (table) => {

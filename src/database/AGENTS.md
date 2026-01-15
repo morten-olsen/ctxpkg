@@ -51,12 +51,12 @@ Tracks synced collection packages:
 
 | Column | Type | Description |
 |--------|------|-------------|
-| `id` | string (PK) | Collection ID (`file:{hash}` or `pkg:{url}`) |
-| `type` | string | `'file'` or `'pkg'` |
-| `path` | string? | Local path (file type) |
-| `glob` | string? | Glob pattern (file type) |
-| `url` | text? | Manifest URL (pkg type) |
-| `manifest_hash` | string? | SHA-256 of manifest (pkg type) |
+| `id` | string (PK) | Collection ID (`pkg:{url}`) |
+| `url` | text | Manifest URL |
+| `name` | string? | Package name from manifest |
+| `version` | string? | Package version from manifest |
+| `description` | text? | Package description from manifest |
+| `manifest_hash` | string? | SHA-256 of manifest |
 | `last_sync_at` | string? | ISO timestamp of last sync |
 | `created_at` | string | ISO timestamp |
 | `updated_at` | string | ISO timestamp |

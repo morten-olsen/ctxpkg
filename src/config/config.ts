@@ -46,14 +46,6 @@ const config = convict({
       env: 'CTXPKG_AUTO_START',
     },
   },
-  documents: {
-    defaultCollections: {
-      doc: 'Default collections to search in (optional)',
-      format: Array,
-      default: [] as string[],
-      env: 'CTXPKG_DEFAULT_COLLECTIONS',
-    },
-  },
   project: {
     configFile: {
       doc: 'Filename for project configuration file',

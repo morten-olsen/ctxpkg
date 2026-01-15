@@ -18,7 +18,7 @@ import { createCliClient } from './cli.client.ts';
 
 import { Services } from '#root/utils/utils.services.ts';
 import { CollectionsService } from '#root/collections/collections.ts';
-import { isFileSpec, type FileSpec, type PkgSpec, type Manifest } from '#root/collections/collections.schemas.ts';
+import type { CollectionSpec, Manifest } from '#root/collections/collections.schemas.ts';
 import { config } from '#root/config/config.ts';
 import type { GetBackendAPIResponse } from '#root/backend/backend.types.ts';
 
@@ -57,81 +57,34 @@ const createCollectionsCli = (command: Command) => {
   command
     .command('add')
     .argument('<name>', 'Name/alias for the collection')
-    .argument('[source]', 'Path or URL (type will be inferred if not specified)')
+    .argument('<url>', 'Manifest or bundle URL (supports https://, file://, or relative paths)')
     .description('Add a collection to the project config')
-    .option('-t, --type <type>', 'Collection type (file or pkg)')
-    .option('-p, --path <path>', 'Local path (for file type)')
-    .option('-g, --glob <pattern>', 'Glob pattern (for file type)', '**/*.md')
-    .option('-u, --url <url>', 'Manifest or bundle URL (for pkg type)')
     .action(
-      withErrorHandling(
-        async (
-          name: string,
-          source: string | undefined,
-          options: { type?: string; path?: string; glob?: string; url?: string },
-        ) => {
-          const services = new Services();
-          try {
-            const collectionsService = services.get(CollectionsService);
+      withErrorHandling(async (name: string, url: string) => {
+        const services = new Services();
+        try {
+          const collectionsService = services.get(CollectionsService);
 
-            if (!collectionsService.projectConfigExists()) {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const configFile = (config as any).get('project.configFile') as string;
-              formatError(`No ${configFile} found. Run 'collections init' first.`);
-              return;
-            }
-
-            // Determine the spec based on provided options
-            let spec: FileSpec | PkgSpec;
-
-            if (options.type === 'file' || options.path) {
-              // Explicit file type
-              const path = options.path || source;
-              if (!path) {
-                formatError('Path is required for file type. Use --path or provide as source argument.');
-                return;
-              }
-              spec = {
-                type: 'file',
-                path,
-                glob: options.glob || '**/*.md',
-              };
-            } else if (options.type === 'pkg' || options.url) {
-              // Explicit pkg type
-              const url = options.url || source;
-              if (!url) {
-                formatError('URL is required for pkg type. Use --url or provide as source argument.');
-                return;
-              }
-              spec = {
-                type: 'pkg',
-                url,
-              };
-            } else if (source) {
-              // Infer type from source
-              if (source.startsWith('http://') || source.startsWith('https://') || source.startsWith('file://')) {
-                spec = { type: 'pkg', url: source };
-              } else {
-                // Assume local path
-                spec = { type: 'file', path: source, glob: options.glob || '**/*.md' };
-              }
-            } else {
-              formatError('Must provide a source path/URL or use --path/--url options.');
-              return;
-            }
-
-            collectionsService.addToProjectConfig(name, spec);
-
-            if (isFileSpec(spec)) {
-              formatSuccess(`Added file collection "${name}" (${spec.path}, ${spec.glob})`);
-            } else {
-              formatSuccess(`Added pkg collection "${name}" (${spec.url})`);
-            }
-          } finally {
-            await services.destroy();
+          if (!collectionsService.projectConfigExists()) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const configFile = (config as any).get('project.configFile') as string;
+            formatError(`No ${configFile} found. Run 'collections init' first.`);
+            return;
           }
-        },
-      ),
+
+          // Normalize local paths to file:// URLs
+          let normalizedUrl = url;
+          if (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('file://')) {
+            normalizedUrl = `file://${url}`;
+          }
+
+          const spec: CollectionSpec = { url: normalizedUrl };
+          collectionsService.addToProjectConfig(name, spec);
+          formatSuccess(`Added collection "${name}" (${normalizedUrl})`);
+        } finally {
+          await services.destroy();
+        }
+      }),
     );
 
   // collections remove
@@ -208,29 +161,20 @@ const createCollectionsCli = (command: Command) => {
           formatHeader('Collections');
 
           const maxNameLen = Math.max(...entries.map(([name]) => name.length), 10);
-          const sourceLengths = entries.map(([, spec]) => {
-            if (isFileSpec(spec)) return `${spec.path} (${spec.glob})`.length;
-            return spec.url.length;
-          });
+          const sourceLengths = entries.map(([, spec]) => spec.url.length);
           const maxSourceLen = Math.min(Math.max(...sourceLengths, 20), 50);
 
           formatTableHeader([
             { name: 'Name', width: maxNameLen },
-            { name: 'Type', width: 6 },
-            { name: 'Source', width: maxSourceLen },
+            { name: 'URL', width: maxSourceLen },
             { name: 'Status', width: 14 },
           ]);
 
           for (const [name, spec] of entries) {
-            const status = await client.collections.getSyncStatus({ spec, cwd: process.cwd() });
+            const status = await client.collections.getSyncStatus({ spec });
             const statusText = status === 'synced' ? chalk.green('✓ synced') : chalk.yellow('⚠ not synced');
 
-            let source: string;
-            if (isFileSpec(spec)) {
-              source = `${spec.path} (${spec.glob})`;
-            } else {
-              source = spec.url;
-            }
+            let source = spec.url;
 
             // Truncate source if too long
             if (source.length > maxSourceLen) {
@@ -239,7 +183,6 @@ const createCollectionsCli = (command: Command) => {
 
             formatTableRow([
               { value: name, width: maxNameLen, color: chalk.cyan },
-              { value: spec.type, width: 6, color: chalk.dim },
               { value: source, width: maxSourceLen, color: chalk.white },
               { value: statusText, width: 14 },
             ]);
@@ -294,9 +237,8 @@ const createCollectionsCli = (command: Command) => {
             formatWarning('Dry run mode - no changes will be made');
             console.log();
 
-            for (const [collectionName, spec] of toSync) {
-              const typeLabel = isFileSpec(spec) ? 'file' : 'pkg';
-              console.log(chalk.bold(`Syncing ${collectionName} (${typeLabel})...`));
+            for (const [collectionName] of toSync) {
+              console.log(chalk.bold(`Syncing ${collectionName}...`));
               formatInfo('  Would sync this collection');
               console.log();
             }
@@ -309,8 +251,7 @@ const createCollectionsCli = (command: Command) => {
           const client = await createCliClient();
           try {
             for (const [collectionName, spec] of toSync) {
-              const typeLabel = isFileSpec(spec) ? 'file' : 'pkg';
-              console.log(chalk.bold(`Syncing ${collectionName} (${typeLabel})...`));
+              console.log(chalk.bold(`Syncing ${collectionName}...`));
 
               const result = await client.collections.sync({
                 name: collectionName,

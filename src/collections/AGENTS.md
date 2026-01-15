@@ -4,7 +4,7 @@ This document describes the collections module architecture for AI agents workin
 
 ## Overview
 
-The collections module manages context packages — both local file collections and remote packages. It handles project configuration (`context.json`), collection syncing, and manifest resolution. Think of it as the "package manager" part of ctxpkg.
+The collections module manages context packages — both local and remote manifest-based packages. It handles project configuration (`context.json`), collection syncing, and manifest resolution. Think of it as the "package manager" part of ctxpkg.
 
 ## File Structure
 
@@ -15,12 +15,15 @@ The collections module manages context packages — both local file collections 
 
 ## Core Concepts
 
-### Collection Types
+### Collection Spec
 
-| Type | Spec | ID Format | Use Case |
-|------|------|-----------|----------|
-| `file` | `{ type: 'file', path, glob }` | `file:{sha256}` | Local files matching a glob |
-| `pkg` | `{ type: 'pkg', url }` | `pkg:{url}` | Remote packages with manifest |
+All collections are manifest-based packages identified by URL:
+
+```typescript
+type CollectionSpec = { url: string };
+```
+
+Collection IDs are computed as `pkg:{normalized_url}`.
 
 ### Project Config (`context.json`)
 
@@ -29,8 +32,8 @@ Maps user-friendly names to collection specs:
 ```json
 {
   "collections": {
-    "my-docs": { "type": "file", "path": "./docs", "glob": "**/*.md" },
-    "langchain": { "type": "pkg", "url": "https://example.com/langchain/manifest.json" }
+    "my-docs": { "url": "file://./docs/manifest.json" },
+    "langchain": { "url": "https://example.com/langchain/manifest.json" }
   }
 }
 ```
@@ -64,9 +67,8 @@ Sources can be `{ glob: [...] }` (local only) or `{ files: [...] }`.
 │  Project Config        │  Sync Operations                   │
 │  ─────────────────     │  ────────────────                  │
 │  readProjectConfig()   │  syncCollection()                  │
-│  writeProjectConfig()  │  syncFileCollection()              │
-│  addToProjectConfig()  │  syncPkgCollection()               │
-│                        │  syncBundleCollection()            │
+│  writeProjectConfig()  │  syncPkgCollection()               │
+│  addToProjectConfig()  │  syncBundleCollection()            │
 ├────────────────────────┼────────────────────────────────────┤
 │  Collection IDs        │  Manifest Handling                 │
 │  ─────────────────     │  ────────────────────              │
@@ -83,14 +85,6 @@ Sources can be `{ glob: [...] }` (local only) or `{ files: [...] }`.
 ```
 
 ## Sync Flow
-
-### File Collections
-
-1. Glob for files in `spec.path` matching `spec.glob`
-2. Hash each file's content
-3. Compare with existing documents in database
-4. Add/update/remove documents as needed
-5. Update collection record with `last_sync_at`
 
 ### Package Collections
 
@@ -110,55 +104,16 @@ Sources can be `{ glob: [...] }` (local only) or `{ files: [...] }`.
 
 ## Collection ID Computation
 
-IDs are deterministic and computed from the spec:
+IDs are deterministic and computed from the URL:
 
 ```typescript
-// File: hash of normalized path + glob
-`file:${sha256(normalizedPath + ':' + glob)}`
-
-// Package: normalized URL
+// Normalized URL (trailing slashes removed)
 `pkg:${url.replace(/\/+$/, '')}`
 ```
 
 This ensures the same spec always maps to the same collection ID.
 
 ## Key Patterns
-
-### Adding a New Source Type
-
-1. Add schema in `collections.schemas.ts`:
-
-```typescript
-const mySpecSchema = z.object({
-  type: z.literal('mytype'),
-  // ... fields
-});
-
-// Add to discriminated union
-const collectionSpecSchema = z.discriminatedUnion('type', [
-  fileSpecSchema,
-  pkgSpecSchema,
-  mySpecSchema,
-]);
-```
-
-2. Add type guard:
-
-```typescript
-const isMySpec = (spec: CollectionSpec): spec is MySpec => {
-  return spec.type === 'mytype';
-};
-```
-
-3. Implement sync method in `CollectionsService`:
-
-```typescript
-public syncMyCollection = async (name, spec, cwd, options): Promise<SyncResult> => {
-  // ... implementation
-};
-```
-
-4. Add case to `syncCollection()` dispatcher.
 
 ### Manifest Source Resolution
 
@@ -169,6 +124,6 @@ The service handles multiple source formats:
 
 ### Change Detection
 
-- **File collections**: Content hash comparison
-- **Package collections**: Manifest hash for skip-if-unchanged, then per-file content hash
+- **Manifest hash**: Skip sync if manifest unchanged
+- **Content hash**: Per-file content hash comparison for updates
 - **Force sync**: `force: true` option bypasses hash checks

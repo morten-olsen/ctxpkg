@@ -6,7 +6,7 @@ This document describes the architecture and design of `ctxpkg`.
 
 The project is a TypeScript CLI application that provides a **package manager for AI agent context**:
 
-1. Collection package management (local files and remote packages)
+1. Collection package management (local and remote manifest-based packages)
 2. Semantic search over indexed documents
 3. MCP server integration for AI tools and editors
 4. A daemon mode for persistent backend services
@@ -46,27 +46,20 @@ The heart of the application — package manager for AI context.
 - `collections.ts` - Main CollectionsService class
 - `collections.schemas.ts` - Zod schemas for project config, manifests, and database records
 
-**Collection Types:**
-
-| Type | Description | Source |
-|------|-------------|--------|
-| `file` | Local ad-hoc indexing | Path + glob pattern |
-| `pkg` | Shareable packages | Manifest URL or bundle |
-
 **Key Concepts:**
 
 - **Project Config** (`context.json`): Per-project file mapping aliases to collection specs
 - **Manifest** (`manifest.json`): Package definition with name, version, and sources
 - **Bundle** (`.tar.gz`): Distributable archive with manifest and files
-- **Collection ID**: Unique identifier (`file:{hash}` or `pkg:{url}`)
+- **Collection ID**: Unique identifier (`pkg:{url}`)
 
 **Sync Process:**
 
 ```
 1. Read project config (context.json)
 2. For each collection:
-   a. Compute collection ID from spec
-   b. Fetch manifest or expand glob
+   a. Compute collection ID from URL
+   b. Fetch and parse manifest (or extract bundle)
    c. Compare with existing indexed documents (hash-based)
    d. Add/update/remove documents as needed
 3. Update collection metadata in database
@@ -208,10 +201,8 @@ CollectionsService.syncCollection()
     ↓
 ┌─────────────────────────────────┐
 │       Resolve Sources           │
-├─────────────┬───────────────────┤
-│ file type   │ pkg type          │
-│ (glob)      │ (manifest/bundle) │
-└─────────────┴───────────────────┘
+│    (manifest.json or bundle)    │
+└─────────────────────────────────┘
     ↓
 Compare with existing documents
     ↓

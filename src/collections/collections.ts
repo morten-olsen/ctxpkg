@@ -12,15 +12,11 @@ import {
   projectConfigSchema,
   collectionRecordSchema,
   manifestSchema,
-  isFileSpec,
-  isPkgSpec,
   isGlobSources,
   isFileSources,
   type ProjectConfig,
   type CollectionSpec,
   type CollectionRecord,
-  type FileSpec,
-  type PkgSpec,
   type Manifest,
   type FileEntry,
   type ResolvedFileEntry,
@@ -118,22 +114,12 @@ class CollectionsService {
 
   /**
    * Compute the collection ID for a given spec.
+   * Format: pkg:{normalized_url}
    */
-  public computeCollectionId = (spec: CollectionSpec, cwd: string = process.cwd()): string => {
-    if (isFileSpec(spec)) {
-      const normalizedPath = this.normalizePath(spec.path, cwd);
-      const input = `${normalizedPath}:${spec.glob}`;
-      const hash = createHash('sha256').update(input).digest('hex');
-      return `file:${hash}`;
-    }
-
-    if (isPkgSpec(spec)) {
-      // Normalize URL (remove trailing slashes)
-      const normalizedUrl = spec.url.replace(/\/+$/, '');
-      return `pkg:${normalizedUrl}`;
-    }
-
-    throw new Error('Unknown collection spec type');
+  public computeCollectionId = (spec: CollectionSpec): string => {
+    // Normalize URL (remove trailing slashes)
+    const normalizedUrl = spec.url.replace(/\/+$/, '');
+    return `pkg:${normalizedUrl}`;
   };
 
   // === Database Operations ===
@@ -279,11 +265,8 @@ class CollectionsService {
   /**
    * Get sync status for a collection by computing its ID and checking the database.
    */
-  public getSyncStatus = async (
-    spec: CollectionSpec,
-    cwd: string = process.cwd(),
-  ): Promise<'synced' | 'not_synced' | 'stale'> => {
-    const id = this.computeCollectionId(spec, cwd);
+  public getSyncStatus = async (spec: CollectionSpec): Promise<'synced' | 'not_synced' | 'stale'> => {
+    const id = this.computeCollectionId(spec);
     const record = await this.getCollection(id);
 
     if (!record || !record.last_sync_at) {
@@ -306,15 +289,7 @@ class CollectionsService {
     cwd: string = process.cwd(),
     options: { force?: boolean; onProgress?: (message: string) => void } = {},
   ): Promise<SyncResult> => {
-    if (isFileSpec(spec)) {
-      return this.syncFileCollection(name, spec, cwd, options);
-    }
-
-    if (isPkgSpec(spec)) {
-      return this.syncPkgCollection(name, spec, cwd, options);
-    }
-
-    throw new Error('Unknown collection spec type');
+    return this.syncPkgCollection(name, spec, cwd, options);
   };
 
   // === Manifest Handling ===
@@ -554,12 +529,12 @@ class CollectionsService {
    */
   public syncBundleCollection = async (
     name: string,
-    spec: PkgSpec,
+    spec: CollectionSpec,
     cwd: string = process.cwd(),
     options: { force?: boolean; onProgress?: (message: string) => void } = {},
   ): Promise<SyncResult> => {
     const { force = false, onProgress } = options;
-    const collectionId = this.computeCollectionId(spec, cwd);
+    const collectionId = this.computeCollectionId(spec);
     const { path: bundleUrl } = this.parseManifestUrl(spec.url, cwd);
 
     let tempDir: string | null = null;
@@ -653,10 +628,10 @@ class CollectionsService {
 
       // Update collection record
       await this.upsertCollection(collectionId, {
-        type: 'pkg',
-        path: null,
-        glob: null,
         url: spec.url,
+        name: manifest.name,
+        version: manifest.version,
+        description: manifest.description ?? null,
         manifest_hash: manifestHash,
         last_sync_at: new Date().toISOString(),
       });
@@ -676,16 +651,16 @@ class CollectionsService {
   };
 
   /**
-   * Sync a pkg type collection.
+   * Sync a pkg collection.
    */
   public syncPkgCollection = async (
     name: string,
-    spec: PkgSpec,
+    spec: CollectionSpec,
     cwd: string = process.cwd(),
     options: { force?: boolean; onProgress?: (message: string) => void } = {},
   ): Promise<SyncResult> => {
     const { force = false, onProgress } = options;
-    const collectionId = this.computeCollectionId(spec, cwd);
+    const collectionId = this.computeCollectionId(spec);
     const { protocol, path: manifestPath, isBundle } = this.parseManifestUrl(spec.url, cwd);
 
     if (isBundle) {
@@ -798,10 +773,10 @@ class CollectionsService {
 
     // Update collection record
     await this.upsertCollection(collectionId, {
-      type: 'pkg',
-      path: null,
-      glob: null,
       url: spec.url,
+      name: manifest.name,
+      version: manifest.version,
+      description: manifest.description ?? null,
       manifest_hash: manifestHash,
       last_sync_at: new Date().toISOString(),
     });
@@ -811,96 +786,6 @@ class CollectionsService {
       updated: actualUpdated,
       removed: toRemove.length,
       total: entries.length,
-    };
-  };
-
-  /**
-   * Sync a file type collection.
-   */
-  public syncFileCollection = async (
-    name: string,
-    spec: FileSpec,
-    cwd: string = process.cwd(),
-    options: { force?: boolean; onProgress?: (message: string) => void } = {},
-  ): Promise<SyncResult> => {
-    const { force = false, onProgress } = options;
-    const collectionId = this.computeCollectionId(spec, cwd);
-    const normalizedPath = this.normalizePath(spec.path, cwd);
-
-    onProgress?.(`Scanning files in ${normalizedPath}...`);
-
-    // Get current files from filesystem
-    const currentFiles = new Map<string, string>();
-    for await (const file of glob(spec.glob, { cwd: normalizedPath })) {
-      const fullPath = resolve(normalizedPath, file);
-      const content = await readFile(fullPath, 'utf8');
-      const hash = createHash('sha256').update(content).digest('hex');
-      currentFiles.set(file, hash);
-    }
-
-    // Get existing documents from database
-    const documentsService = this.#services.get(DocumentsService);
-    const existingDocs = await documentsService.getDocumentIds(collectionId);
-    const existingMap = new Map(existingDocs.map((doc) => [doc.id, doc.hash]));
-
-    // Compute changes
-    const toAdd: string[] = [];
-    const toUpdate: string[] = [];
-    const toRemove: string[] = [];
-
-    for (const [file, hash] of currentFiles) {
-      const existingHash = existingMap.get(file);
-      if (!existingHash) {
-        toAdd.push(file);
-      } else if (existingHash !== hash || force) {
-        toUpdate.push(file);
-      }
-      // If hash matches and not force, skip (no change needed)
-    }
-
-    for (const [file] of existingMap) {
-      if (!currentFiles.has(file)) {
-        toRemove.push(file);
-      }
-    }
-
-    // Apply changes
-    if (toRemove.length > 0) {
-      onProgress?.(`Removing ${toRemove.length} deleted documents...`);
-      await documentsService.deleteDocuments(collectionId, toRemove);
-    }
-
-    const toProcess = [...toAdd, ...toUpdate];
-    for (let i = 0; i < toProcess.length; i++) {
-      const file = toProcess[i];
-      const isNew = toAdd.includes(file);
-      onProgress?.(`${isNew ? 'Adding' : 'Updating'} ${file} (${i + 1}/${toProcess.length})...`);
-
-      const fullPath = resolve(normalizedPath, file);
-      const content = await readFile(fullPath, 'utf8');
-
-      await documentsService.updateDocument({
-        collection: collectionId,
-        id: file,
-        content,
-      });
-    }
-
-    // Update collection record
-    await this.upsertCollection(collectionId, {
-      type: 'file',
-      path: normalizedPath,
-      glob: spec.glob,
-      url: null,
-      manifest_hash: null,
-      last_sync_at: new Date().toISOString(),
-    });
-
-    return {
-      added: toAdd.length,
-      updated: toUpdate.length,
-      removed: toRemove.length,
-      total: currentFiles.size,
     };
   };
 

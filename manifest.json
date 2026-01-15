@@ -1,0 +1,10 @@
+{
+  "name": "ctxpkg-docs",
+  "version": "1.0.0",
+  "description": "Documentation for the ctxpkg project",
+  "sources": {
+    "glob": [
+      "**/*.md"
+    ]
+  }
+}

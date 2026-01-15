@@ -75,7 +75,7 @@ const server = createDocumentsMcpServer({
   client,
   name: 'my-mcp-server',
   version: '1.0.0',
-  aliasMap: new Map([['docs', 'file:abc123']]),
+  aliasMap: new Map([['docs', 'pkg:file://./docs/manifest.json']]),
 });
 
 await runMcpServer(server);
