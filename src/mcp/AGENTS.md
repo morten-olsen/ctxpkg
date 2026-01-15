@@ -37,6 +37,11 @@ The MCP module provides [Model Context Protocol](https://modelcontextprotocol.io
 │  │  • documents_list_collections                         │  │
 │  │  • documents_search                                   │  │
 │  │  • documents_get_document                             │  │
+│  │  • documents_list_documents                           │  │
+│  │  • documents_get_outline                              │  │
+│  │  • documents_get_section                              │  │
+│  │  • documents_search_batch                             │  │
+│  │  • documents_find_related                             │  │
 │  └───────────────────────────────────────────────────────┘  │
 │                           │                                 │
 │  ┌───────────────────────▼───────────────────────────────┐  │
@@ -119,9 +124,14 @@ The MCP server exposes these tools to AI agents:
 
 | Tool | Description |
 |------|-------------|
-| `documents_list_collections` | List available document collections |
-| `documents_search` | Semantic search across documents |
+| `documents_list_collections` | List available document collections with descriptions and versions |
+| `documents_search` | Semantic search across documents using hybrid vector + keyword matching |
 | `documents_get_document` | Get full document content |
+| `documents_list_documents` | List all documents in a collection (table of contents) |
+| `documents_get_outline` | Get document heading structure without fetching full content |
+| `documents_get_section` | Get a specific section of a document by heading |
+| `documents_search_batch` | Execute multiple search queries in a single call (max 10) |
+| `documents_find_related` | Find content semantically related to a document or chunk |
 
 See `src/tools/documents/` for tool implementation details.
 

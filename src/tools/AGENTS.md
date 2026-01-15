@@ -161,9 +161,14 @@ registerMcpTools(server, tools);
 
 Tools for searching and retrieving indexed documentation:
 
-- `documents_list_collections` — List available collections
-- `documents_search` — Semantic search across documents
+- `documents_list_collections` — List available collections with descriptions and versions
+- `documents_search` — Semantic search across documents with hybrid vector + keyword matching
 - `documents_get_document` — Get full document content
+- `documents_list_documents` — List all documents in a collection (table of contents)
+- `documents_get_outline` — Get document heading structure without fetching full content
+- `documents_get_section` — Get a specific section of a document by heading
+- `documents_search_batch` — Execute multiple search queries in a single call
+- `documents_find_related` — Find content semantically related to a document or chunk
 
 ### File Tools (`files/`) — Legacy
 

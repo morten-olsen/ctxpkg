@@ -10,6 +10,16 @@ import {
   type ReferenceDocument,
   type SearchChunksOptions,
   type SearchChunkItem,
+  type ListDocumentsParams,
+  type ListDocumentsResult,
+  type GetOutlineParams,
+  type OutlineResult,
+  type OutlineItem,
+  type GetSectionParams,
+  type SectionResult,
+  type FindRelatedParams,
+  type SearchBatchParams,
+  type SearchBatchResult,
 } from './documents.schemas.ts';
 
 import type { Services } from '#root/utils/utils.services.ts';
@@ -70,12 +80,34 @@ class DocumentsService {
     const databaseService = this.#services.get(DatabaseService);
     const database = await databaseService.getInstance();
 
-    const collections = await database(tableNames.referenceDocuments)
+    // Get document counts per collection
+    const docCounts = await database(tableNames.referenceDocuments)
       .select('collection', database.raw('COUNT(*) as document_count'))
       .groupBy('collection')
       .orderBy('collection', 'asc');
 
-    return collections;
+    // Get collection metadata (description, version) from collections table
+    const collectionIds = docCounts.map((c) => c.collection);
+    const collectionMeta = await database(tableNames.collections)
+      .select('id', 'description', 'version')
+      .whereIn('id', collectionIds);
+
+    // Build a map of collection ID -> metadata
+    const metaMap = new Map<string, { description: string | null; version: string | null }>();
+    for (const meta of collectionMeta) {
+      metaMap.set(meta.id, { description: meta.description, version: meta.version });
+    }
+
+    // Merge counts with metadata
+    return docCounts.map((c) => {
+      const meta = metaMap.get(c.collection);
+      return {
+        collection: c.collection,
+        document_count: c.document_count,
+        description: meta?.description ?? null,
+        version: meta?.version ?? null,
+      };
+    });
   };
 
   public dropCollection = async (collection: string) => {
@@ -456,6 +488,246 @@ class DocumentsService {
       await trx(tableNames.referenceDocumentChunksFts).delete().where({ collection }).whereIn('document', ids);
       await trx(tableNames.referenceDocuments).delete().where({ collection }).whereIn('id', ids);
     });
+  };
+
+  // === New methods for MCP tools v2 ===
+
+  /**
+   * List documents in a collection with pagination.
+   */
+  public listDocuments = async (params: ListDocumentsParams): Promise<ListDocumentsResult> => {
+    const { collection, limit = 100, offset = 0 } = params;
+
+    const databaseService = this.#services.get(DatabaseService);
+    const database = await databaseService.getInstance();
+
+    // Get total count
+    const [{ count: total }] = await database(tableNames.referenceDocuments).where({ collection }).count('* as count');
+
+    // Get documents with pagination
+    const documents = await database(tableNames.referenceDocuments)
+      .select('id', 'content')
+      .where({ collection })
+      .orderBy('id', 'asc')
+      .limit(limit)
+      .offset(offset);
+
+    const documentInfos = documents.map((doc) => ({
+      id: doc.id,
+      title: this.#extractTitle(doc.content, doc.id),
+      size: doc.content.length,
+    }));
+
+    return {
+      documents: documentInfos,
+      total: Number(total),
+      hasMore: offset + documents.length < Number(total),
+    };
+  };
+
+  /**
+   * Get the outline (heading structure) of a document.
+   */
+  public getOutline = async (params: GetOutlineParams): Promise<OutlineResult | null> => {
+    const { collection, document: documentId, maxDepth = 3 } = params;
+
+    const doc = await this.getDocument(collection, documentId);
+    if (!doc) {
+      return null;
+    }
+
+    const title = this.#extractTitle(doc.content, documentId);
+    const outline = this.#parseOutline(doc.content, maxDepth);
+
+    return { title, outline };
+  };
+
+  /**
+   * Parse markdown content to extract heading outline.
+   */
+  #parseOutline = (content: string, maxDepth: number): OutlineItem[] => {
+    const lines = content.split('\n');
+    const outline: OutlineItem[] = [];
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const match = line.match(/^(#{1,6})\s+(.+)$/);
+      if (match) {
+        const level = match[1].length;
+        if (level <= maxDepth) {
+          outline.push({
+            level,
+            text: match[2].trim(),
+            line: i + 1, // 1-indexed line numbers
+          });
+        }
+      }
+    }
+
+    return outline;
+  };
+
+  /**
+   * Get a specific section of a document by heading.
+   */
+  public getSection = async (params: GetSectionParams): Promise<SectionResult | null> => {
+    const { collection, document: documentId, section, includeSubsections = true } = params;
+
+    const doc = await this.getDocument(collection, documentId);
+    if (!doc) {
+      return null;
+    }
+
+    const lines = doc.content.split('\n');
+    let startLine = -1;
+    let endLine = lines.length;
+    let matchedHeading = '';
+    let headingLevel = 0;
+
+    // Find the section heading (case-insensitive substring match)
+    const sectionLower = section.toLowerCase();
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const match = line.match(/^(#{1,6})\s+(.+)$/);
+      if (match) {
+        const level = match[1].length;
+        const text = match[2].trim();
+
+        if (startLine === -1) {
+          // Looking for the start
+          if (text.toLowerCase().includes(sectionLower)) {
+            startLine = i;
+            matchedHeading = text;
+            headingLevel = level;
+          }
+        } else {
+          // Looking for the end
+          if (includeSubsections) {
+            // Stop at same or higher level heading
+            if (level <= headingLevel) {
+              endLine = i;
+              break;
+            }
+          } else {
+            // Stop at any heading
+            endLine = i;
+            break;
+          }
+        }
+      }
+    }
+
+    if (startLine === -1) {
+      return null;
+    }
+
+    const sectionContent = lines.slice(startLine, endLine).join('\n');
+
+    return {
+      section: matchedHeading,
+      level: headingLevel,
+      content: sectionContent,
+      startLine: startLine + 1, // 1-indexed
+      endLine: endLine, // 1-indexed (exclusive)
+    };
+  };
+
+  /**
+   * Find content related to a document or chunk.
+   */
+  public findRelated = async (params: FindRelatedParams): Promise<SearchChunkItem[]> => {
+    const { collection, document: documentId, chunk, limit = 5, sameDocument = false } = params;
+
+    const databaseService = this.#services.get(DatabaseService);
+    const database = await databaseService.getInstance();
+    const embedder = this.#services.get(EmbedderService);
+
+    let queryEmbedding: number[];
+
+    if (chunk) {
+      // Embed the provided chunk
+      queryEmbedding = await embedder.createQueryEmbedding(chunk);
+    } else {
+      // Compute centroid of document's chunk embeddings
+      const chunks = await database(tableNames.referenceDocumentChunks)
+        .select('embedding')
+        .where({ collection, document: documentId });
+
+      if (chunks.length === 0) {
+        return [];
+      }
+
+      // Parse embeddings and compute mean
+      const embeddings = chunks.map((c) => JSON.parse(c.embedding) as number[]);
+      const dimensions = embeddings[0].length;
+      const centroid = new Array(dimensions).fill(0);
+
+      for (const emb of embeddings) {
+        for (let i = 0; i < dimensions; i++) {
+          centroid[i] += emb[i];
+        }
+      }
+
+      for (let i = 0; i < dimensions; i++) {
+        centroid[i] /= embeddings.length;
+      }
+
+      queryEmbedding = centroid;
+    }
+
+    // Search for similar chunks
+    let query = database(tableNames.referenceDocumentChunks)
+      .select('id', 'collection', 'document', 'content')
+      .select(database.raw('vec_distance_cosine(?, embedding) as distance', [JSON.stringify(queryEmbedding)]));
+
+    // Exclude source document unless sameDocument is true
+    if (!sameDocument) {
+      // Use explicit whereNot with function to ensure correct SQL generation
+      query = query.whereNot(function () {
+        this.where('collection', collection).andWhere('document', documentId);
+      });
+    }
+    // When sameDocument is true, we include all chunks (no exclusion)
+
+    query = query.orderBy('distance', 'asc').limit(limit);
+
+    const results = await query;
+
+    return results.map((row) => ({
+      id: row.id,
+      document: row.document,
+      collection: row.collection,
+      content: row.content,
+      distance: row.distance,
+      score: 1 - row.distance, // Convert distance to similarity score
+    }));
+  };
+
+  /**
+   * Execute multiple search queries in batch.
+   */
+  public searchBatch = async (params: SearchBatchParams): Promise<SearchBatchResult> => {
+    const { queries, limit = 5, maxDistance, hybridSearch = true } = params;
+
+    const results = [];
+
+    for (const q of queries) {
+      const searchResults = await this.search({
+        query: q.query,
+        collections: q.collections,
+        limit,
+        maxDistance,
+        hybridSearch,
+        rerank: false, // Don't rerank in batch for performance
+      });
+
+      results.push({
+        query: q.query,
+        results: searchResults,
+      });
+    }
+
+    return { results };
   };
 }
 

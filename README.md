@@ -163,6 +163,10 @@ ctxpkg mcp docs --no-global
 }
 ```
 
+The MCP server exposes 8 tools for document access: `list_collections`, `list_documents`, `search`, `search_batch`, `get_document`, `get_outline`, `get_section`, and `find_related`.
+
+See [MCP Server Documentation](docs/mcp-server.md) for the complete tool reference and usage guide.
+
 ### Configuration Commands
 
 ```bash

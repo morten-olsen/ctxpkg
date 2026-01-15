@@ -4,12 +4,23 @@ import {
   referenceDocumentSchema,
   searchChunksOptionsSchema,
   searchChunkItemSchema,
+  listDocumentsParamsSchema,
+  listDocumentsResultSchema,
+  getOutlineParamsSchema,
+  outlineResultSchema,
+  getSectionParamsSchema,
+  sectionResultSchema,
+  findRelatedParamsSchema,
+  searchBatchParamsSchema,
+  searchBatchResultSchema,
 } from '#root/documents/documents.schemas.ts';
 
-// Collection info schema
+// Collection info schema (enhanced with metadata for MCP tools v2)
 const collectionInfoSchema = z.object({
   collection: z.string(),
   document_count: z.number(),
+  description: z.string().nullable(),
+  version: z.string().nullable(),
 });
 
 type CollectionInfo = z.infer<typeof collectionInfoSchema>;
@@ -99,4 +110,14 @@ export {
   syncCollectionParamsSchema,
   syncResultSchema,
   collectionRecordInfoSchema,
+  // New schemas for MCP tools v2
+  listDocumentsParamsSchema,
+  listDocumentsResultSchema,
+  getOutlineParamsSchema,
+  outlineResultSchema,
+  getSectionParamsSchema,
+  sectionResultSchema,
+  findRelatedParamsSchema,
+  searchBatchParamsSchema,
+  searchBatchResultSchema,
 };

@@ -178,6 +178,29 @@ Returns all document IDs and hashes in a collection — used by sync logic to co
 
 Batch delete multiple documents and their chunks from all tables.
 
+### `listDocuments({ collection, limit, offset })`
+
+List all documents in a collection with pagination. Returns document IDs, titles (extracted from first `# heading`), and sizes.
+
+### `getOutline({ collection, document, maxDepth })`
+
+Get the heading structure of a document. Parses markdown headings up to `maxDepth` (default: 3). Returns title and array of outline items with level, text, and line number.
+
+### `getSection({ collection, document, section, includeSubsections })`
+
+Get a specific section of a document by heading. Matches section heading case-insensitively. Returns section content, heading level, and line range. If `includeSubsections` is true (default), includes nested subsections.
+
+### `searchBatch({ queries, limit, maxDistance, hybridSearch })`
+
+Execute multiple search queries in a single call. Useful for researching multiple concepts efficiently. Limited to 10 queries per batch.
+
+### `findRelated({ collection, document, chunk, limit, sameDocument })`
+
+Find content semantically related to a document or chunk:
+- If `chunk` is provided: embed that text and find similar
+- If no `chunk`: compute centroid of document's chunk embeddings
+- If `sameDocument` is false (default): exclude chunks from source document
+
 ## Dependencies
 
 - **DatabaseService**: SQLite with sqlite-vec extension

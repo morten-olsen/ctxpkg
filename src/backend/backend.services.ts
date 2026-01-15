@@ -7,13 +7,25 @@ import {
   dropCollectionParamsSchema,
   getDocumentParamsSchema,
   syncCollectionParamsSchema,
+  listDocumentsParamsSchema,
+  getOutlineParamsSchema,
+  getSectionParamsSchema,
+  findRelatedParamsSchema,
+  searchBatchParamsSchema,
 } from './backend.schemas.ts';
 import type { CollectionInfo, SystemStatus, SyncResult, CollectionRecordInfo } from './backend.schemas.ts';
 
 import type { Services } from '#root/utils/utils.services.ts';
 import { DocumentsService } from '#root/documents/documents.ts';
 import { CollectionsService } from '#root/collections/collections.ts';
-import type { ReferenceDocument, SearchChunkItem } from '#root/documents/documents.schemas.ts';
+import type {
+  ReferenceDocument,
+  SearchChunkItem,
+  ListDocumentsResult,
+  OutlineResult,
+  SectionResult,
+  SearchBatchResult,
+} from '#root/documents/documents.schemas.ts';
 
 // Factory to create service procedures with access to Services container
 const createBackendServices = (services: Services, getStatus: () => { uptime: number; connections: number }) => {
@@ -42,6 +54,32 @@ const createBackendServices = (services: Services, getStatus: () => { uptime: nu
     getDocument: procedure(getDocumentParamsSchema, async (params): Promise<ReferenceDocument | null> => {
       const docService = services.get(DocumentsService);
       return docService.getDocument(params.collection, params.id);
+    }),
+
+    // New procedures for MCP tools v2
+    listDocuments: procedure(listDocumentsParamsSchema, async (params): Promise<ListDocumentsResult> => {
+      const docService = services.get(DocumentsService);
+      return docService.listDocuments(params);
+    }),
+
+    getOutline: procedure(getOutlineParamsSchema, async (params): Promise<OutlineResult | null> => {
+      const docService = services.get(DocumentsService);
+      return docService.getOutline(params);
+    }),
+
+    getSection: procedure(getSectionParamsSchema, async (params): Promise<SectionResult | null> => {
+      const docService = services.get(DocumentsService);
+      return docService.getSection(params);
+    }),
+
+    findRelated: procedure(findRelatedParamsSchema, async (params): Promise<SearchChunkItem[]> => {
+      const docService = services.get(DocumentsService);
+      return docService.findRelated(params);
+    }),
+
+    searchBatch: procedure(searchBatchParamsSchema, async (params): Promise<SearchBatchResult> => {
+      const docService = services.get(DocumentsService);
+      return docService.searchBatch(params);
     }),
   };
 
