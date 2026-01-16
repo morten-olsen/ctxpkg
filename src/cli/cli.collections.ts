@@ -57,7 +57,10 @@ const createCollectionsCli = (command: Command) => {
   command
     .command('add')
     .argument('<name>', 'Name/alias for the collection')
-    .argument('<url>', 'Manifest or bundle URL (supports https://, file://, git+https://, git+ssh://, or relative paths)')
+    .argument(
+      '<url>',
+      'Manifest or bundle URL (supports https://, file://, git+https://, git+ssh://, or relative paths)',
+    )
     .description('Add a collection to project or global config')
     .option('-g, --global', 'Add to global config instead of project config')
     .action(

@@ -118,7 +118,33 @@ Add to Claude Desktop config:
 }
 ```
 
+## Server Modes
+
+### Documents Mode (default)
+
+Exposes all document tools individually. The calling agent decides which tools to use.
+
+```bash
+ctxpkg mcp documents
+```
+
+### Agent Mode
+
+Exposes a single `ask_documents` tool. An internal LangChain agent handles searching and synthesizes a single answer. This reduces token/context costs for the calling agent.
+
+```bash
+ctxpkg mcp agent
+```
+
+Requires LLM configuration:
+```bash
+ctxpkg config set llm.apiKey sk-...
+ctxpkg config set llm.model gpt-4o
+```
+
 ## Exposed Tools
+
+### Documents Mode
 
 The MCP server exposes these tools to AI agents:
 
@@ -135,6 +161,16 @@ The MCP server exposes these tools to AI agents:
 
 See `src/tools/documents/` for tool implementation details.
 
+### Agent Mode
+
+| Tool | Description |
+|------|-------------|
+| `ask_documents` | Ask a question with a use case; internal agent searches and synthesizes answer |
+
+The `ask_documents` tool requires both a query and a use case to help the agent determine when sufficient information has been found.
+
+See `src/tools/agent/` and `src/agent/` for implementation details.
+
 ## Key Components
 
 ### `createDocumentsMcpServer(options)`
@@ -148,6 +184,21 @@ type DocumentsMcpServerOptions = {
   version?: string;           // Server version (default: '1.0.0')
   collections?: string[];     // Limit to specific collections
   aliasMap?: Map<string, string>;  // Project alias → collection ID
+};
+```
+
+### `createAgentMcpServer(options)`
+
+Creates an MCP server with agent mode (single `ask_documents` tool):
+
+```typescript
+type AgentMcpServerOptions = {
+  client: BackendClient;      // Required: backend connection
+  llmConfig: LLMConfig;       // Required: LLM configuration
+  name?: string;              // Server name (default: 'ctxpkg-agent')
+  version?: string;           // Server version (default: '1.0.0')
+  aliasMap?: Map<string, string>;  // Project alias → collection ID
+  maxIterations?: number;     // Max agent iterations (default: 15)
 };
 ```
 

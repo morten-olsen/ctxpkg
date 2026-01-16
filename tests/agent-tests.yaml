@@ -1,0 +1,89 @@
+name: ctxpkg Documentation Tests
+description: |
+  Validates that the agent can correctly answer questions about ctxpkg
+  using the project's own documentation as the knowledge base.
+
+collections:
+  project-docs:
+    url: file://../manifest.json
+
+options:
+  validationMode: semantic
+  passThreshold: 0.70
+
+tests:
+  # Simple: Basic command question
+  - id: init-project
+    query: How do I initialize a new ctxpkg project?
+    useCase: Setting up ctxpkg for the first time in my project
+    expected: |
+      To initialize a ctxpkg project, run `ctxpkg col init` in your project
+      directory. This creates a `context.json` file in your project root
+      where collection configurations are stored.
+    keywords:
+      - ctxpkg col init
+      - context.json
+
+  # Medium: Configuration and workflow
+  - id: private-git-repo
+    query: How do I add a private git repository as a documentation collection?
+    useCase: Adding internal company documentation from a private GitHub repo
+    expected: |
+      To add a private git repository, use SSH URLs with the git+ prefix.
+      The format is: git+ssh://git@github.com/org/repo#ref?manifest=path
+
+      Example command:
+      ctxpkg col add private-docs "git+ssh://git@github.com/myorg/docs#main?manifest=manifest.json"
+
+      This uses your local git configuration including SSH keys and
+      credential helpers. If you can git clone the repo, ctxpkg can index it.
+    keywords:
+      - git+ssh://
+      - SSH
+      - manifest
+
+  # Complex: Technical understanding
+  - id: hybrid-search-embedding
+    query: What embedding model does ctxpkg use and how does hybrid search combine vector and keyword matching?
+    useCase: Understanding the search architecture for optimizing documentation retrieval
+    expected: |
+      ctxpkg uses the mixedbread-ai/mxbai-embed-large-v1 embedding model with
+      1024 dimensions. The model runs locally via transformers.js.
+
+      Hybrid search combines two approaches:
+      1. Vector search using sqlite-vec for semantic similarity
+      2. Full-text search using FTS5 for keyword matching
+
+      Results from both are combined using Reciprocal Rank Fusion (RRF),
+      which merges ranked lists by giving higher weight to items that
+      appear near the top of either list.
+    keywords:
+      - mxbai-embed
+      - sqlite-vec
+      - FTS5
+      - hybrid
+
+  # Advanced: New feature requiring understanding of multiple concepts
+  - id: agent-mode-vs-documents
+    query: What is agent mode in the MCP server and how does it differ from documents mode?
+    useCase: Deciding which MCP server mode to use for my AI editor integration
+    expected: |
+      Agent mode (ctxpkg mcp agent) exposes a single ask_documents tool that
+      uses an internal AI agent to search documentation and synthesize answers.
+      Only the final answer is returned, not intermediate tool calls.
+
+      Documents mode (ctxpkg mcp documents) exposes 8 individual tools like
+      documents_search, documents_get_document, etc. The calling AI agent
+      decides which tools to use and sees all intermediate results.
+
+      Agent mode reduces token/context costs in conversations because only
+      the synthesized answer goes back to the parent agent. However, it
+      requires LLM API configuration and incurs API costs for internal reasoning.
+
+      Documents mode gives more control but accumulates context from each
+      tool call throughout the conversation.
+    keywords:
+      - ask_documents
+      - agent mode
+      - token
+      - synthesize

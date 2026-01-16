@@ -20,6 +20,39 @@ const config = convict({
       env: 'CTXPKG_DATABASE_PATH',
     },
   },
+  llm: {
+    provider: {
+      doc: 'OpenAI-compatible API base URL',
+      format: String,
+      default: 'https://api.openai.com/v1',
+      env: 'CTXPKG_LLM_PROVIDER',
+    },
+    model: {
+      doc: 'Model identifier to use for agent reasoning',
+      format: String,
+      default: 'gpt-4o-mini',
+      env: 'CTXPKG_LLM_MODEL',
+    },
+    apiKey: {
+      doc: 'API key for the LLM provider',
+      format: String,
+      default: '',
+      env: 'CTXPKG_LLM_API_KEY',
+      sensitive: true,
+    },
+    temperature: {
+      doc: 'Temperature for LLM responses (0-2)',
+      format: Number,
+      default: 0,
+      env: 'CTXPKG_LLM_TEMPERATURE',
+    },
+    maxTokens: {
+      doc: 'Maximum tokens for LLM responses',
+      format: 'nat',
+      default: 4096,
+      env: 'CTXPKG_LLM_MAX_TOKENS',
+    },
+  },
   daemon: {
     socketPath: {
       doc: 'Path to the daemon Unix socket file',

@@ -1,7 +1,10 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 
+import { createDocumentAgent, type CreateDocumentAgentOptions } from '#root/agent/agent.ts';
+import type { LLMConfig } from '#root/agent/agent.types.ts';
 import type { BackendClient } from '#root/client/client.ts';
+import { createAgentToolDefinitions } from '#root/tools/agent/agent.ts';
 import { createDocumentToolDefinitions } from '#root/tools/documents/documents.ts';
 import { registerMcpTools } from '#root/tools/tools.mcp.ts';
 
@@ -21,6 +24,17 @@ type DocumentsMcpServerOptions = McpServerOptions & {
   aliasMap?: Map<string, string>;
 };
 
+type AgentMcpServerOptions = McpServerOptions & {
+  /** Backend client for accessing the documents service */
+  client: BackendClient;
+  /** LLM configuration for the agent */
+  llmConfig: LLMConfig;
+  /** Optional map of project aliases to collection IDs */
+  aliasMap?: Map<string, string>;
+  /** Maximum agent iterations */
+  maxIterations?: number;
+};
+
 /**
  * Create an MCP server with document tools.
  */
@@ -35,6 +49,34 @@ const createDocumentsMcpServer = (options: DocumentsMcpServerOptions) => {
   // Create and register document tools
   const documentTools = createDocumentToolDefinitions({ client, aliasMap });
   registerMcpTools(server, documentTools);
+
+  return server;
+};
+
+/**
+ * Create an MCP server with agent mode (single ask_documents tool).
+ * The internal agent uses LLM to search and synthesize answers.
+ */
+const createAgentMcpServer = (options: AgentMcpServerOptions) => {
+  const { client, aliasMap, llmConfig, maxIterations, name = 'ctxpkg-agent', version = '1.0.0' } = options;
+
+  const server = new McpServer({
+    name,
+    version,
+  });
+
+  // Create document agent
+  const agentOptions: CreateDocumentAgentOptions = {
+    client,
+    llmConfig,
+    aliasMap,
+    maxIterations,
+  };
+  const agent = createDocumentAgent(agentOptions);
+
+  // Create and register agent tools (just ask_documents)
+  const agentTools = createAgentToolDefinitions({ agent });
+  registerMcpTools(server, agentTools);
 
   return server;
 };
@@ -59,5 +101,5 @@ const runMcpServer = async (server: McpServer) => {
   });
 };
 
-export { createDocumentsMcpServer, runMcpServer };
-export type { McpServerOptions, DocumentsMcpServerOptions };
+export { createAgentMcpServer, createDocumentsMcpServer, runMcpServer };
+export type { AgentMcpServerOptions, DocumentsMcpServerOptions, McpServerOptions };

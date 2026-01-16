@@ -65,6 +65,8 @@ ctxpkg docs search "how to authenticate"
 | [Configuration](docs/configuration.md) | Project config, global config, manifests |
 | [How It Works](docs/how-it-works.md) | Indexing pipeline, search algorithms |
 | [MCP Server](docs/mcp-server.md) | AI editor integration and tools |
+| [AI Chat & Agent Mode](docs/ai-chat.md) | Chat with docs, reduced-token MCP mode |
+| [Agent Testing](docs/agent-testing.md) | Validate agent performance with test suites |
 | [Publishing Packages](docs/github-distribution.md) | Distribute docs via GitHub Releases |
 
 ## CLI Overview
@@ -81,8 +83,16 @@ ctxpkg col list                    # Show collections
 ctxpkg docs search "query"         # Search documents
 ctxpkg docs ls                     # List indexed collections
 
+# Chat — AI-powered Q&A
+ctxpkg chat "question"             # One-shot question
+ctxpkg chat -i                     # Interactive session
+
+# Agent — testing and evaluation
+ctxpkg agent test tests.yaml       # Run agent test suite
+
 # MCP — AI editor integration
-ctxpkg mcp docs                    # Start MCP server
+ctxpkg mcp docs                    # Start MCP server (tools mode)
+ctxpkg mcp agent                   # Start MCP server (agent mode)
 
 # Daemon — background service
 ctxpkg daemon start                # Start for better performance
@@ -142,6 +152,36 @@ Connect ctxpkg to your AI editor:
 Your AI assistant gains access to 8 document tools: `search`, `search_batch`, `get_document`, `get_section`, `get_outline`, `find_related`, `list_collections`, and `list_documents`.
 
 See [MCP Server Documentation](docs/mcp-server.md) for details.
+
+## AI Chat & Agent Mode
+
+Chat with your documentation directly from the terminal, or use **Agent Mode** for reduced token costs in AI assistants.
+
+```bash
+# Configure your LLM
+ctxpkg config set llm.apiKey sk-...
+
+# One-shot question
+ctxpkg chat "How do I implement caching?" --use-case "Optimizing API performance"
+
+# Interactive session
+ctxpkg chat -i
+```
+
+**Agent Mode MCP** exposes a single `ask_documents` tool that uses an internal AI agent to search and synthesize answers. The calling agent sees only the final result, not intermediate search calls — reducing context overhead in long conversations.
+
+```json
+{
+  "mcpServers": {
+    "ctxpkg-agent": {
+      "command": "ctxpkg",
+      "args": ["mcp", "agent"]
+    }
+  }
+}
+```
+
+See [AI Chat & Agent Mode](docs/ai-chat.md) for details.
 
 ## Distributing Internal Documentation
 
