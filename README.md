@@ -21,7 +21,13 @@ Stack documentation layers — from personal notes to team guidelines to project
 - **Semantic Search** — Local vector + keyword search finds relevant content without dumping everything into prompts
 - **MCP Integration** — AI editors like Cursor and Claude Desktop can query your context directly
 - **Git-Native Distribution** — Index docs directly from any git repo (public or private) — no publishing required
-- **Bundle Any Source** — Package documentation from Confluence, Notion, or any system into distributable `.tar.gz` archives
+- **Bundle Any Source** — Export docs from Confluence, Notion, or any system to markdown, then package into distributable `.tar.gz` archives
+
+## Design Philosophy
+
+**Zero-friction adoption.** You probably already have documentation worth indexing — a folder of markdown notes, an Obsidian vault, your company's engineering wiki, or a repo full of ADRs and guides. ctxpkg works with what you have. Point it at existing files and start searching. No migration, no reformatting, no custom schemas required.
+
+**Low-risk investment.** Even if you decide ctxpkg isn't for you, any documentation you create remains useful. It's just markdown files with a simple manifest — humans can read it, other tools can consume it, and nothing is locked into a proprietary format. The worst case scenario is you end up with better-organized documentation.
 
 ## Installation
 
