@@ -91,8 +91,6 @@ jobs:
       - name: Publish to NPM
         if: steps.tag.outputs.new_version
         run: pnpm publish --no-git-checks --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create GitHub Release
         if: steps.tag.outputs.new_version
