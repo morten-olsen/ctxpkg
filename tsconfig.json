@@ -15,12 +15,7 @@
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
     "erasableSyntaxOnly": true,
-    "allowImportingTsExtensions": false,
-    "paths": {
-      "#root/*": [
-        "./src/*"
-      ]
-    }
+    "allowImportingTsExtensions": false
   },
   "include": [
     "src/**/*.ts"

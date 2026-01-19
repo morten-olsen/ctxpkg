@@ -3,12 +3,11 @@ import type { Command } from 'commander';
 
 import { createDocumentAgent, getLLMConfigFromAppConfig } from '../agent/agent.js';
 import type { AgentStep } from '../agent/agent.types.js';
+import { CollectionsService } from '../collections/collections.js';
+import { Services } from '../utils/utils.services.js';
 
 import { createCliClient } from './cli.client.js';
 import { chalk, formatError, formatHeader, formatInfo, withErrorHandling } from './cli.utils.js';
-
-import { CollectionsService } from '#root/collections/collections.js';
-import { Services } from '#root/utils/utils.services.js';
 
 type ChatOptions = {
   interactive?: boolean;

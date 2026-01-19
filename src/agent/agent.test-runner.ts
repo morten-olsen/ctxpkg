@@ -3,6 +3,11 @@ import { dirname, resolve } from 'node:path';
 
 import { parse as parseYaml } from 'yaml';
 
+import { Services, destroy } from '../utils/utils.services.js';
+import { EmbedderService } from '../embedder/embedder.js';
+import type { BackendClient } from '../client/client.js';
+import { createClient } from '../client/client.js';
+
 import { createDocumentAgent, getLLMConfigFromAppConfig } from './agent.js';
 import type { LLMConfig } from './agent.types.js';
 import {
@@ -13,11 +18,6 @@ import {
   type TestSuite,
   type ValidationMode,
 } from './agent.test-runner.schemas.js';
-
-import type { BackendClient } from '#root/client/client.js';
-import { createClient } from '#root/client/client.js';
-import { EmbedderService } from '#root/embedder/embedder.js';
-import { Services, destroy } from '#root/utils/utils.services.js';
 
 /**
  * Callback for test progress updates

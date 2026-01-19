@@ -5,6 +5,10 @@ import { resolve } from 'node:path';
 import { TokenTextSplitter } from '@langchain/textsplitters';
 import { type FeatureExtractionPipeline, pipeline, cos_sim } from '@huggingface/transformers';
 
+import type { Services } from '../utils/utils.services.js';
+import { DatabaseService, tableNames } from '../database/database.js';
+import { EmbedderService } from '../embedder/embedder.js';
+
 import {
   searchChunkItemSchema,
   type ReferenceDocument,
@@ -21,10 +25,6 @@ import {
   type SearchBatchParams,
   type SearchBatchResult,
 } from './documents.schemas.js';
-
-import type { Services } from '#root/utils/utils.services.js';
-import { DatabaseService, tableNames } from '#root/database/database.js';
-import { EmbedderService } from '#root/embedder/embedder.js';
 
 // Chunking configuration
 const CHUNK_SIZE = 400;

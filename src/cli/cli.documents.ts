@@ -1,6 +1,9 @@
 import type { Command } from 'commander';
 import { select, confirm, input } from '@inquirer/prompts';
 
+import { Services } from '../utils/utils.services.js';
+import { CollectionsService } from '../collections/collections.js';
+
 import {
   formatHeader,
   formatSuccess,
@@ -12,9 +15,6 @@ import {
   chalk,
 } from './cli.utils.js';
 import { createCliClient } from './cli.client.js';
-
-import { Services } from '#root/utils/utils.services.js';
-import { CollectionsService } from '#root/collections/collections.js';
 
 const createDocumentsCli = (command: Command) => {
   command.description('Manage reference document collections');

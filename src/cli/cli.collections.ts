@@ -3,6 +3,13 @@ import { resolve, basename } from 'node:path';
 
 import type { Command } from 'commander';
 
+import { Services } from '../utils/utils.services.js';
+import { CollectionsService } from '../collections/collections.js';
+import type { CollectionSpec, Manifest } from '../collections/collections.schemas.js';
+import { config } from '../config/config.js';
+import type { GetBackendAPIResponse } from '../backend/backend.types.js';
+
+import { createCliClient } from './cli.client.js';
 import {
   formatHeader,
   formatSuccess,
@@ -14,13 +21,6 @@ import {
   withErrorHandling,
   chalk,
 } from './cli.utils.js';
-import { createCliClient } from './cli.client.js';
-
-import { Services } from '#root/utils/utils.services.js';
-import { CollectionsService } from '#root/collections/collections.js';
-import type { CollectionSpec, Manifest } from '#root/collections/collections.schemas.js';
-import { config } from '#root/config/config.js';
-import type { GetBackendAPIResponse } from '#root/backend/backend.types.js';
 
 type SyncResult = GetBackendAPIResponse<'collections', 'sync'>;
 

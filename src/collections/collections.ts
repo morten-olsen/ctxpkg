@@ -9,6 +9,11 @@ import { pipeline } from 'node:stream/promises';
 import { simpleGit } from 'simple-git';
 import * as tar from 'tar';
 
+import type { Services } from '../utils/utils.services.js';
+import { DatabaseService, tableNames } from '../database/database.js';
+import { DocumentsService } from '../documents/documents.js';
+import { config } from '../config/config.js';
+
 import {
   projectConfigSchema,
   collectionRecordSchema,
@@ -24,11 +29,6 @@ import {
   type FileEntry,
   type ResolvedFileEntry,
 } from './collections.schemas.js';
-
-import type { Services } from '#root/utils/utils.services.js';
-import { DatabaseService, tableNames } from '#root/database/database.js';
-import { DocumentsService } from '#root/documents/documents.js';
-import { config } from '#root/config/config.js';
 
 /**
  * Result of a sync operation.

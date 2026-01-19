@@ -1,5 +1,7 @@
 import type { Command } from 'commander';
 
+import { DaemonManager } from '../daemon/daemon.manager.js';
+
 import {
   formatHeader,
   formatSuccess,
@@ -9,8 +11,6 @@ import {
   withErrorHandling,
   chalk,
 } from './cli.utils.js';
-
-import { DaemonManager } from '#root/daemon/daemon.manager.js';
 
 const createDaemonCli = (command: Command) => {
   command.description('Manage the background daemon');

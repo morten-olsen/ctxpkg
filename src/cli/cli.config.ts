@@ -1,6 +1,8 @@
 import type { Command } from 'commander';
 import { input, confirm, select } from '@inquirer/prompts';
 
+import { config, configPath, saveConfig } from '../config/config.js';
+
 import {
   formatHeader,
   formatSuccess,
@@ -12,8 +14,6 @@ import {
   withErrorHandling,
   chalk,
 } from './cli.utils.js';
-
-import { config, configPath, saveConfig } from '#root/config/config.js';
 
 /**
  * Parse a string value to the appropriate type

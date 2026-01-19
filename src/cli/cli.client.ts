@@ -1,5 +1,5 @@
-import { BackendClient } from '#root/client/client.js';
-import { DaemonManager } from '#root/daemon/daemon.manager.js';
+import { BackendClient } from '../client/client.js';
+import { DaemonManager } from '../daemon/daemon.manager.js';
 
 type CliClientMode = 'auto' | 'direct' | 'daemon';
 

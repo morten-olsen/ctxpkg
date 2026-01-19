@@ -13,7 +13,7 @@ import {
   findRelatedParamsSchema,
   searchBatchParamsSchema,
   searchBatchResultSchema,
-} from '#root/documents/documents.schemas.js';
+} from '../documents/documents.schemas.js';
 
 // Collection info schema (enhanced with metadata for MCP tools v2)
 const collectionInfoSchema = z.object({

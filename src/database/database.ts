@@ -4,10 +4,10 @@ import { dirname } from 'node:path';
 import knex, { type Knex } from 'knex';
 import type { Db } from 'sqlite-vec';
 
-import { migrationSource } from './migrations/migrations.js';
+import { config } from '../config/config.js';
+import { destroy } from '../utils/utils.services.js';
 
-import { config } from '#root/config/config.js';
-import { destroy } from '#root/utils/utils.services.js';
+import { migrationSource } from './migrations/migrations.js';
 
 class DatabaseService {
   #instance?: Promise<Knex>;

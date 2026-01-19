@@ -2,12 +2,11 @@ import type { Command } from 'commander';
 
 import { getLLMConfigFromAppConfig } from '../agent/agent.js';
 import { createAgentMcpServer, createDocumentsMcpServer, runMcpServer } from '../mcp/mcp.js';
+import { CollectionsService } from '../collections/collections.js';
+import { Services } from '../utils/utils.services.js';
 
 import { createCliClient } from './cli.client.js';
 import { formatError, withErrorHandling } from './cli.utils.js';
-
-import { CollectionsService } from '#root/collections/collections.js';
-import { Services } from '#root/utils/utils.services.js';
 
 const createMcpCli = (command: Command) => {
   command.description('Start MCP servers for tool integration');

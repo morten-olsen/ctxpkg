@@ -2,6 +2,11 @@ import { AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage } from
 import { createReactAgent } from '@langchain/langgraph/prebuilt';
 import { ChatOpenAI } from '@langchain/openai';
 
+import type { BackendClient } from '../client/client.js';
+import { createDocumentToolDefinitions } from '../tools/documents/documents.js';
+import { toLangchainTools } from '../tools/tools.langchain.js';
+
+import { AGENT_SYSTEM_PROMPT, formatCollectionRestriction, formatUserPrompt } from './agent.prompts.js';
 import type {
   AgentResponse,
   AgentStep,
@@ -11,11 +16,6 @@ import type {
   LLMConfig,
   RetryConfig,
 } from './agent.types.js';
-import { AGENT_SYSTEM_PROMPT, formatCollectionRestriction, formatUserPrompt } from './agent.prompts.js';
-
-import type { BackendClient } from '#root/client/client.js';
-import { createDocumentToolDefinitions } from '#root/tools/documents/documents.js';
-import { toLangchainTools } from '#root/tools/tools.langchain.js';
 
 /** Default retry configuration */
 const DEFAULT_RETRY_CONFIG: RetryConfig = {
@@ -352,7 +352,7 @@ const createDocumentAgent = (options: CreateDocumentAgentOptions): DocumentAgent
  * Get LLM config from the application config.
  */
 const getLLMConfigFromAppConfig = async (): Promise<LLMConfig> => {
-  const { config } = await import('#root/config/config.js');
+  const { config } = await import('../config/config.js');
 
   // Use type assertion for dynamic config access
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

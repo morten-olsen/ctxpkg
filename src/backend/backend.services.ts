@@ -1,6 +1,18 @@
 import { z } from 'zod';
 
-import { procedure } from './backend.protocol.js';
+import type { Services } from '../utils/utils.services.js';
+import { DocumentsService } from '../documents/documents.js';
+import { CollectionsService } from '../collections/collections.js';
+import type {
+  ReferenceDocument,
+  SearchChunkItem,
+  ListDocumentsResult,
+  OutlineResult,
+  SectionResult,
+  SearchBatchResult,
+} from '../documents/documents.schemas.js';
+
+import type { CollectionInfo, SystemStatus, SyncResult, CollectionRecordInfo } from './backend.schemas.js';
 import {
   searchChunksOptionsSchema,
   updateCollectionOptionsSchema,
@@ -13,19 +25,7 @@ import {
   findRelatedParamsSchema,
   searchBatchParamsSchema,
 } from './backend.schemas.js';
-import type { CollectionInfo, SystemStatus, SyncResult, CollectionRecordInfo } from './backend.schemas.js';
-
-import type { Services } from '#root/utils/utils.services.js';
-import { DocumentsService } from '#root/documents/documents.js';
-import { CollectionsService } from '#root/collections/collections.js';
-import type {
-  ReferenceDocument,
-  SearchChunkItem,
-  ListDocumentsResult,
-  OutlineResult,
-  SectionResult,
-  SearchBatchResult,
-} from '#root/documents/documents.schemas.js';
+import { procedure } from './backend.protocol.js';
 
 // Factory to create service procedures with access to Services container
 const createBackendServices = (services: Services, getStatus: () => { uptime: number; connections: number }) => {
