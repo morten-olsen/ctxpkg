@@ -18,6 +18,7 @@ type TestOptions = {
   verbose?: boolean;
   validationMode?: ValidationMode;
   threshold?: number;
+  model?: string;
 };
 
 /**
@@ -107,6 +108,7 @@ const createAgentCli = (command: Command) => {
     .option('-v, --verbose', 'Show detailed progress and results')
     .option('-m, --validation-mode <mode>', 'Override validation mode (semantic, llm, keywords)')
     .option('-t, --threshold <number>', 'Override pass threshold (0-1)', parseFloat)
+    .option('--model <model>', 'Model to use for LLM validation (defaults to configured model)')
     .action(
       withErrorHandling(async (testFile: string, options: TestOptions) => {
         const runner = createTestRunner();
@@ -133,6 +135,7 @@ const createAgentCli = (command: Command) => {
             onProgress: options.json ? undefined : createProgressCallback(options.verbose ?? false),
             validationMode: options.validationMode as ValidationMode | undefined,
             passThreshold: options.threshold,
+            validationModel: options.model,
             baseDir,
           });
 

@@ -249,6 +249,7 @@ Options:
   -v, --verbose                 Show detailed progress and results
   -m, --validation-mode <mode>  Override validation mode for all tests
   -t, --threshold <number>      Override pass threshold (0-1)
+  --model <model>               Model to use for LLM validation
 ```
 
 ### Examples
@@ -262,6 +263,9 @@ ctxpkg agent test tests/suite.yaml --verbose
 
 # Override to use LLM validation
 ctxpkg agent test tests/suite.yaml -m llm
+
+# Use a different model for validation (avoid self-evaluation)
+ctxpkg agent test tests/suite.yaml -m llm --model gpt-4o
 
 # Strict threshold
 ctxpkg agent test tests/suite.yaml -t 0.9
@@ -406,6 +410,19 @@ jobs:
 | Evaluating answer quality/completeness | `llm` |
 | CI with cost constraints | `semantic` or `keywords` |
 | Detailed quality assessment | `llm` |
+
+### LLM Validation Model
+
+When using LLM validation, consider using a different model than the one generating answers to avoid self-evaluation bias:
+
+```bash
+# If agent uses gpt-4o-mini, validate with gpt-4o
+ctxpkg agent test tests/suite.yaml -m llm --model gpt-4o
+
+# Or use a different provider's model for independent evaluation
+```
+
+This provides more objective validation since the judge model has no knowledge of how the answer was generated.
 
 ### Threshold Guidelines
 

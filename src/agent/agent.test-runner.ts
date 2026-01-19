@@ -44,6 +44,8 @@ type TestRunnerOptions = {
   validationMode?: ValidationMode;
   /** Override pass threshold for all tests */
   passThreshold?: number;
+  /** Model to use for LLM validation (defaults to llmConfig.model) */
+  validationModel?: string;
   /** Base directory for resolving relative URLs in the test file (defaults to test file's directory) */
   baseDir?: string;
 };
@@ -243,7 +245,14 @@ class AgentTestRunner {
           result = await this.#validateKeywords(testCase, actualAnswer, passThreshold);
           break;
         case 'llm':
-          result = await this.#validateWithLLM(testCase, actualAnswer, passThreshold, llmConfig, suiteOptions);
+          result = await this.#validateWithLLM(
+            testCase,
+            actualAnswer,
+            passThreshold,
+            llmConfig,
+            suiteOptions,
+            runnerOptions.validationModel,
+          );
           break;
         case 'semantic':
         default:
@@ -337,13 +346,14 @@ class AgentTestRunner {
     passThreshold: number,
     llmConfig: LLMConfig,
     suiteOptions: TestSuite['options'],
+    validationModel?: string,
   ): Promise<TestResult> {
     const { ChatOpenAI } = await import('@langchain/openai');
     const { HumanMessage } = await import('@langchain/core/messages');
 
     const llm = new ChatOpenAI({
       configuration: { baseURL: llmConfig.provider },
-      modelName: llmConfig.model,
+      modelName: validationModel ?? llmConfig.model,
       apiKey: llmConfig.apiKey,
       temperature: 0,
     });
