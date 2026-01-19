@@ -17,12 +17,12 @@ import {
   mockJsonResponse,
   mockTextResponse,
   createDocument,
-} from './setup.ts';
+} from './setup.js';
 
 // Types for dynamically imported modules
-type Services = InstanceType<typeof import('../src/utils/utils.services.ts').Services>;
-type CollectionsService = InstanceType<typeof import('../src/collections/collections.ts').CollectionsService>;
-type BackendClient = InstanceType<typeof import('../src/client/client.ts').BackendClient>;
+type Services = InstanceType<typeof import('../src/utils/utils.services.js').Services>;
+type CollectionsService = InstanceType<typeof import('../src/collections/collections.js').CollectionsService>;
+type BackendClient = InstanceType<typeof import('../src/client/client.js').BackendClient>;
 
 describe('integration', () => {
   let env: TestEnv;
@@ -33,9 +33,9 @@ describe('integration', () => {
   beforeEach(async () => {
     env = await createTestEnv();
 
-    const { Services } = await import('../src/utils/utils.services.ts');
-    const { CollectionsService } = await import('../src/collections/collections.ts');
-    const { BackendClient } = await import('../src/client/client.ts');
+    const { Services } = await import('../src/utils/utils.services.js');
+    const { CollectionsService } = await import('../src/collections/collections.js');
+    const { BackendClient } = await import('../src/client/client.js');
 
     services = new Services();
     collectionsService = services.get(CollectionsService);

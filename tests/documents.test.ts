@@ -10,12 +10,12 @@ import { cp } from 'node:fs/promises';
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
-import { createTestEnv, type TestEnv, FIXTURE_DIR } from './setup.ts';
+import { createTestEnv, type TestEnv, FIXTURE_DIR } from './setup.js';
 
 // Types for dynamically imported modules
-type Services = InstanceType<typeof import('../src/utils/utils.services.ts').Services>;
-type CollectionsService = InstanceType<typeof import('../src/collections/collections.ts').CollectionsService>;
-type BackendClient = InstanceType<typeof import('../src/client/client.ts').BackendClient>;
+type Services = InstanceType<typeof import('../src/utils/utils.services.js').Services>;
+type CollectionsService = InstanceType<typeof import('../src/collections/collections.js').CollectionsService>;
+type BackendClient = InstanceType<typeof import('../src/client/client.js').BackendClient>;
 
 describe('documents', () => {
   let env: TestEnv;
@@ -26,9 +26,9 @@ describe('documents', () => {
   beforeEach(async () => {
     env = await createTestEnv();
 
-    const { Services } = await import('../src/utils/utils.services.ts');
-    const { CollectionsService } = await import('../src/collections/collections.ts');
-    const { BackendClient } = await import('../src/client/client.ts');
+    const { Services } = await import('../src/utils/utils.services.js');
+    const { CollectionsService } = await import('../src/collections/collections.js');
+    const { BackendClient } = await import('../src/client/client.js');
 
     services = new Services();
     collectionsService = services.get(CollectionsService);

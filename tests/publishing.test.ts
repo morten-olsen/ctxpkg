@@ -11,7 +11,7 @@ import { join } from 'node:path';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as tar from 'tar';
 
-import { createTestEnv, type TestEnv, createDocument } from './setup.ts';
+import { createTestEnv, type TestEnv, createDocument } from './setup.js';
 
 describe('publishing', () => {
   let env: TestEnv;
@@ -214,8 +214,8 @@ describe('publishing', () => {
       );
 
       // Sync the bundle
-      const { Services } = await import('../src/utils/utils.services.ts');
-      const { CollectionsService } = await import('../src/collections/collections.ts');
+      const { Services } = await import('../src/utils/utils.services.js');
+      const { CollectionsService } = await import('../src/collections/collections.js');
 
       const services = new Services();
       try {

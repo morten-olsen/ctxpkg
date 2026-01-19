@@ -7,8 +7,8 @@
 
 import { describe, it, expect, vi } from 'vitest';
 
-import { isRetryableError, withRetry } from '../src/agent/agent.ts';
-import { formatUserPrompt, formatCollectionRestriction } from '../src/agent/agent.prompts.ts';
+import { isRetryableError, withRetry } from '../src/agent/agent.js';
+import { formatUserPrompt, formatCollectionRestriction } from '../src/agent/agent.prompts.js';
 
 describe('agent', () => {
   describe('isRetryableError', () => {
@@ -185,7 +185,7 @@ describe('agent', () => {
 describe('agent types', () => {
   describe('AgentResponse', () => {
     it('schema validates correct response', async () => {
-      const { agentResponseSchema } = await import('../src/agent/agent.types.ts');
+      const { agentResponseSchema } = await import('../src/agent/agent.types.js');
 
       const result = agentResponseSchema.safeParse({
         answer: 'The answer is 42',
@@ -197,7 +197,7 @@ describe('agent types', () => {
     });
 
     it('schema rejects invalid confidence', async () => {
-      const { agentResponseSchema } = await import('../src/agent/agent.types.ts');
+      const { agentResponseSchema } = await import('../src/agent/agent.types.js');
 
       const result = agentResponseSchema.safeParse({
         answer: 'The answer',
@@ -209,7 +209,7 @@ describe('agent types', () => {
     });
 
     it('schema allows optional note', async () => {
-      const { agentResponseSchema } = await import('../src/agent/agent.types.ts');
+      const { agentResponseSchema } = await import('../src/agent/agent.types.js');
 
       const result = agentResponseSchema.safeParse({
         answer: 'The answer',
@@ -227,7 +227,7 @@ describe('agent types', () => {
 
   describe('Source schema', () => {
     it('validates source with section', async () => {
-      const { sourceSchema } = await import('../src/agent/agent.types.ts');
+      const { sourceSchema } = await import('../src/agent/agent.types.js');
 
       const result = sourceSchema.safeParse({
         collection: 'my-docs',
@@ -239,7 +239,7 @@ describe('agent types', () => {
     });
 
     it('validates source without section', async () => {
-      const { sourceSchema } = await import('../src/agent/agent.types.ts');
+      const { sourceSchema } = await import('../src/agent/agent.types.js');
 
       const result = sourceSchema.safeParse({
         collection: 'my-docs',

@@ -12,11 +12,11 @@ import { join } from 'node:path';
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
-import { createTestEnv, type TestEnv } from './setup.ts';
+import { createTestEnv, type TestEnv } from './setup.js';
 
 // Types for dynamically imported modules
-type Services = InstanceType<typeof import('../src/utils/utils.services.ts').Services>;
-type CollectionsService = InstanceType<typeof import('../src/collections/collections.ts').CollectionsService>;
+type Services = InstanceType<typeof import('../src/utils/utils.services.js').Services>;
+type CollectionsService = InstanceType<typeof import('../src/collections/collections.js').CollectionsService>;
 
 describe('collections', () => {
   let env: TestEnv;
@@ -28,8 +28,8 @@ describe('collections', () => {
     env = await createTestEnv();
 
     // Dynamically import after env vars are set
-    const { Services } = await import('../src/utils/utils.services.ts');
-    const { CollectionsService } = await import('../src/collections/collections.ts');
+    const { Services } = await import('../src/utils/utils.services.js');
+    const { CollectionsService } = await import('../src/collections/collections.js');
 
     services = new Services();
     collectionsService = services.get(CollectionsService);
