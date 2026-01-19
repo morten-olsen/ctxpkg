@@ -1,4 +1,4 @@
-import { config } from '#root/config/config.ts';
+import { config } from '#root/config/config.js';
 
 const getSocketPath = (): string => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

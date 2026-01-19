@@ -3,8 +3,8 @@
  * These types define the contract between backend and client.
  */
 
-import type { BackendServices } from './backend.services.ts';
-import type { ProcedureToFunction } from './backend.protocol.ts';
+import type { BackendServices } from './backend.services.js';
+import type { ProcedureToFunction } from './backend.protocol.js';
 
 /**
  * Complete backend API definition.

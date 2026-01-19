@@ -4,10 +4,10 @@ import { dirname } from 'node:path';
 import knex, { type Knex } from 'knex';
 import type { Db } from 'sqlite-vec';
 
-import { migrationSource } from './migrations/migrations.ts';
+import { migrationSource } from './migrations/migrations.js';
 
-import { config } from '#root/config/config.ts';
-import { destroy } from '#root/utils/utils.services.ts';
+import { config } from '#root/config/config.js';
+import { destroy } from '#root/utils/utils.services.js';
 
 class DatabaseService {
   #instance?: Promise<Knex>;
@@ -60,5 +60,5 @@ class DatabaseService {
   };
 }
 
-export { tableNames } from './migrations/migrations.ts';
+export { tableNames } from './migrations/migrations.js';
 export { DatabaseService };

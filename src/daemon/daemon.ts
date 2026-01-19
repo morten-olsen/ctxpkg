@@ -4,11 +4,11 @@ import { dirname } from 'node:path';
 
 import { WebSocketServer, WebSocket } from 'ws';
 
-import { getSocketPath, getPidFile, getIdleTimeout } from './daemon.config.ts';
-import type { DaemonOptions, DaemonStatus } from './daemon.schemas.ts';
+import { getSocketPath, getPidFile, getIdleTimeout } from './daemon.config.js';
+import type { DaemonOptions, DaemonStatus } from './daemon.schemas.js';
 
-import { Backend } from '#root/backend/backend.ts';
-import { destroy } from '#root/utils/utils.services.ts';
+import { Backend } from '#root/backend/backend.js';
+import { destroy } from '#root/utils/utils.services.js';
 
 class Daemon {
   #backend: Backend;

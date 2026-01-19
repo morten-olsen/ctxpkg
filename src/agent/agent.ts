@@ -10,12 +10,12 @@ import type {
   DocumentAgentOptions,
   LLMConfig,
   RetryConfig,
-} from './agent.types.ts';
-import { AGENT_SYSTEM_PROMPT, formatCollectionRestriction, formatUserPrompt } from './agent.prompts.ts';
+} from './agent.types.js';
+import { AGENT_SYSTEM_PROMPT, formatCollectionRestriction, formatUserPrompt } from './agent.prompts.js';
 
-import type { BackendClient } from '#root/client/client.ts';
-import { createDocumentToolDefinitions } from '#root/tools/documents/documents.ts';
-import { toLangchainTools } from '#root/tools/tools.langchain.ts';
+import type { BackendClient } from '#root/client/client.js';
+import { createDocumentToolDefinitions } from '#root/tools/documents/documents.js';
+import { toLangchainTools } from '#root/tools/tools.langchain.js';
 
 /** Default retry configuration */
 const DEFAULT_RETRY_CONFIG: RetryConfig = {
@@ -352,7 +352,7 @@ const createDocumentAgent = (options: CreateDocumentAgentOptions): DocumentAgent
  * Get LLM config from the application config.
  */
 const getLLMConfigFromAppConfig = async (): Promise<LLMConfig> => {
-  const { config } = await import('#root/config/config.ts');
+  const { config } = await import('#root/config/config.js');
 
   // Use type assertion for dynamic config access
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -1,7 +1,7 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { ZodObject, ZodRawShape } from 'zod';
 
-import type { ToolDefinition, ToolDefinitions } from './tools.types.ts';
+import type { ToolDefinition, ToolDefinitions } from './tools.types.js';
 
 /**
  * Register a common tool definition on an MCP server

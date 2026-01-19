@@ -3,8 +3,8 @@ import { dirname, resolve } from 'node:path';
 
 import { parse as parseYaml } from 'yaml';
 
-import { createDocumentAgent, getLLMConfigFromAppConfig } from './agent.ts';
-import type { LLMConfig } from './agent.types.ts';
+import { createDocumentAgent, getLLMConfigFromAppConfig } from './agent.js';
+import type { LLMConfig } from './agent.types.js';
 import {
   testSuiteSchema,
   type TestCase,
@@ -12,12 +12,12 @@ import {
   type TestRunResult,
   type TestSuite,
   type ValidationMode,
-} from './agent.test-runner.schemas.ts';
+} from './agent.test-runner.schemas.js';
 
-import type { BackendClient } from '#root/client/client.ts';
-import { createClient } from '#root/client/client.ts';
-import { EmbedderService } from '#root/embedder/embedder.ts';
-import { Services, destroy } from '#root/utils/utils.services.ts';
+import type { BackendClient } from '#root/client/client.js';
+import { createClient } from '#root/client/client.js';
+import { EmbedderService } from '#root/embedder/embedder.js';
+import { Services, destroy } from '#root/utils/utils.services.js';
 
 /**
  * Callback for test progress updates

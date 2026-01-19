@@ -1,7 +1,7 @@
 import * as z from 'zod';
 
-import type { DocumentAgent } from '#root/agent/agent.ts';
-import { defineTool, type ToolDefinitions } from '#root/tools/tools.types.ts';
+import type { DocumentAgent } from '#root/agent/agent.js';
+import { defineTool, type ToolDefinitions } from '#root/tools/tools.types.js';
 
 type AgentToolOptions = {
   /** Document agent instance */

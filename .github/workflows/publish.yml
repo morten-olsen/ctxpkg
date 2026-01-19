@@ -74,6 +74,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build
+        run: pnpm run build
+
       - name: Generate tag and version
         id: tag
         uses: mathieudutour/github-tag-action@v6.2
@@ -84,9 +87,6 @@ jobs:
         if: steps.tag.outputs.new_version
         run: |
           pnpm version ${{ steps.tag.outputs.new_version }} --no-git-tag-version
-
-      - name: Build
-        run: pnpm run build
 
       - name: Publish to NPM
         if: steps.tag.outputs.new_version

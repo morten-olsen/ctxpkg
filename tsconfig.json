@@ -11,12 +11,11 @@
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
-    "noEmit": true,
-    "jsx": "react-jsx",
+    "noEmit": false,
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
     "erasableSyntaxOnly": true,
-    "allowImportingTsExtensions": true,
+    "allowImportingTsExtensions": false,
     "paths": {
       "#root/*": [
         "./src/*"

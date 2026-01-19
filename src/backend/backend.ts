@@ -8,10 +8,10 @@ import {
   type Request,
   type Response,
   type Procedure,
-} from './backend.protocol.ts';
-import { createBackendServices, type BackendServices } from './backend.services.ts';
+} from './backend.protocol.js';
+import { createBackendServices, type BackendServices } from './backend.services.js';
 
-import { Services, destroy } from '#root/utils/utils.services.ts';
+import { Services, destroy } from '#root/utils/utils.services.js';
 
 type BackendOptions = {
   services?: Services;

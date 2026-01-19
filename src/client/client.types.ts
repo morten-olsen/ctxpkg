@@ -1,5 +1,5 @@
 // Re-export backend API types for client use
-export type { BackendAPI, GetBackendAPIResponse, GetBackendAPIParams } from '#root/backend/backend.types.ts';
+export type { BackendAPI, GetBackendAPIResponse, GetBackendAPIParams } from '#root/backend/backend.types.js';
 
 // Connection modes
 export type ConnectionMode = 'direct' | 'daemon' | 'websocket';

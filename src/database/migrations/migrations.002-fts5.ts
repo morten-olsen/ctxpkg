@@ -1,4 +1,4 @@
-import type { Migration } from './migrations.types.ts';
+import type { Migration } from './migrations.types.js';
 
 const ftsTableNames = {
   referenceDocumentChunksFts: 'reference_documentchunks_fts',

@@ -1,6 +1,6 @@
 import { tool } from 'langchain';
 
-import type { ToolDefinition, ToolDefinitions } from './tools.types.ts';
+import type { ToolDefinition, ToolDefinitions } from './tools.types.js';
 
 /**
  * Convert a common tool definition to a Langchain tool

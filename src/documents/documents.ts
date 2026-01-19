@@ -20,11 +20,11 @@ import {
   type FindRelatedParams,
   type SearchBatchParams,
   type SearchBatchResult,
-} from './documents.schemas.ts';
+} from './documents.schemas.js';
 
-import type { Services } from '#root/utils/utils.services.ts';
-import { DatabaseService, tableNames } from '#root/database/database.ts';
-import { EmbedderService } from '#root/embedder/embedder.ts';
+import type { Services } from '#root/utils/utils.services.js';
+import { DatabaseService, tableNames } from '#root/database/database.js';
+import { EmbedderService } from '#root/embedder/embedder.js';
 
 // Chunking configuration
 const CHUNK_SIZE = 400;

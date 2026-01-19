@@ -23,12 +23,12 @@ import {
   type Manifest,
   type FileEntry,
   type ResolvedFileEntry,
-} from './collections.schemas.ts';
+} from './collections.schemas.js';
 
-import type { Services } from '#root/utils/utils.services.ts';
-import { DatabaseService, tableNames } from '#root/database/database.ts';
-import { DocumentsService } from '#root/documents/documents.ts';
-import { config } from '#root/config/config.ts';
+import type { Services } from '#root/utils/utils.services.js';
+import { DatabaseService, tableNames } from '#root/database/database.js';
+import { DocumentsService } from '#root/documents/documents.js';
+import { config } from '#root/config/config.js';
 
 /**
  * Result of a sync operation.

@@ -1,12 +1,12 @@
 import { Command } from 'commander';
 
-import { createAgentCli } from './cli.agent.ts';
-import { createChatCli } from './cli.chat.ts';
-import { createCollectionsCli } from './cli.collections.ts';
-import { createConfigCli } from './cli.config.ts';
-import { createDaemonCli } from './cli.daemon.ts';
-import { createDocumentsCli } from './cli.documents.ts';
-import { createMcpCli } from './cli.mcp.ts';
+import { createAgentCli } from './cli.agent.js';
+import { createChatCli } from './cli.chat.js';
+import { createCollectionsCli } from './cli.collections.js';
+import { createConfigCli } from './cli.config.js';
+import { createDaemonCli } from './cli.daemon.js';
+import { createDocumentsCli } from './cli.documents.js';
+import { createMcpCli } from './cli.mcp.js';
 
 const createProgram = () => {
   const program = new Command();

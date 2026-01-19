@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { createProgram } from '../src/cli/cli.ts';
+import { createProgram } from '../dist/cli/cli.js';
 
 const program = createProgram();
 

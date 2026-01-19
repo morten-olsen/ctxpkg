@@ -10,11 +10,11 @@ import {
   formatTableRow,
   withErrorHandling,
   chalk,
-} from './cli.utils.ts';
-import { createCliClient } from './cli.client.ts';
+} from './cli.utils.js';
+import { createCliClient } from './cli.client.js';
 
-import { Services } from '#root/utils/utils.services.ts';
-import { CollectionsService } from '#root/collections/collections.ts';
+import { Services } from '#root/utils/utils.services.js';
+import { CollectionsService } from '#root/collections/collections.js';
 
 const createDocumentsCli = (command: Command) => {
   command.description('Manage reference document collections');

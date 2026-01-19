@@ -5,8 +5,8 @@ import { dirname, join } from 'node:path';
 
 import { WebSocket } from 'ws';
 
-import { getSocketPath, getPidFile, getAutoStart } from './daemon.config.ts';
-import type { DaemonStatus } from './daemon.schemas.ts';
+import { getSocketPath, getPidFile, getAutoStart } from './daemon.config.js';
+import type { DaemonStatus } from './daemon.schemas.js';
 
 type DaemonManagerOptions = {
   socketPath?: string;

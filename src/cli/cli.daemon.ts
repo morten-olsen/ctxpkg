@@ -8,9 +8,9 @@ import {
   formatTableRow,
   withErrorHandling,
   chalk,
-} from './cli.utils.ts';
+} from './cli.utils.js';
 
-import { DaemonManager } from '#root/daemon/daemon.manager.ts';
+import { DaemonManager } from '#root/daemon/daemon.manager.js';
 
 const createDaemonCli = (command: Command) => {
   command.description('Manage the background daemon');

@@ -11,9 +11,9 @@ import {
   flattenObject,
   withErrorHandling,
   chalk,
-} from './cli.utils.ts';
+} from './cli.utils.js';
 
-import { config, configPath, saveConfig } from '#root/config/config.ts';
+import { config, configPath, saveConfig } from '#root/config/config.js';
 
 /**
  * Parse a string value to the appropriate type

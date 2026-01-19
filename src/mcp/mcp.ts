@@ -1,12 +1,12 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 
-import { createDocumentAgent, type CreateDocumentAgentOptions } from '#root/agent/agent.ts';
-import type { LLMConfig } from '#root/agent/agent.types.ts';
-import type { BackendClient } from '#root/client/client.ts';
-import { createAgentToolDefinitions } from '#root/tools/agent/agent.ts';
-import { createDocumentToolDefinitions } from '#root/tools/documents/documents.ts';
-import { registerMcpTools } from '#root/tools/tools.mcp.ts';
+import { createDocumentAgent, type CreateDocumentAgentOptions } from '#root/agent/agent.js';
+import type { LLMConfig } from '#root/agent/agent.types.js';
+import type { BackendClient } from '#root/client/client.js';
+import { createAgentToolDefinitions } from '#root/tools/agent/agent.js';
+import { createDocumentToolDefinitions } from '#root/tools/documents/documents.js';
+import { registerMcpTools } from '#root/tools/tools.mcp.js';
 
 type McpServerOptions = {
   /** Name of the MCP server */

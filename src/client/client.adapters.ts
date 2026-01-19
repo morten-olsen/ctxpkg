@@ -2,11 +2,11 @@ import { randomUUID } from 'node:crypto';
 
 import { WebSocket } from 'ws';
 
-import type { Request, Response } from '#root/backend/backend.protocol.ts';
-import { ErrorCodes } from '#root/backend/backend.protocol.ts';
-import { Backend } from '#root/backend/backend.ts';
-import { DaemonManager } from '#root/daemon/daemon.manager.ts';
-import { destroy } from '#root/utils/utils.services.ts';
+import type { Request, Response } from '#root/backend/backend.protocol.js';
+import { ErrorCodes } from '#root/backend/backend.protocol.js';
+import { Backend } from '#root/backend/backend.js';
+import { DaemonManager } from '#root/daemon/daemon.manager.js';
+import { destroy } from '#root/utils/utils.services.js';
 
 type ClientAdapter = {
   connect(): Promise<void>;

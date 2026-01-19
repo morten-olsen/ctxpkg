@@ -1,5 +1,5 @@
-import type { ClientOptions, BackendAPI } from './client.types.ts';
-import { DirectAdapter, DaemonAdapter, WebSocketAdapter, type ClientAdapter } from './client.adapters.ts';
+import type { ClientOptions, BackendAPI } from './client.types.js';
+import { DirectAdapter, DaemonAdapter, WebSocketAdapter, type ClientAdapter } from './client.adapters.js';
 
 // Create a proxy that converts method calls to RPC requests
 const createServiceProxy = <T extends keyof BackendAPI>(adapter: ClientAdapter, serviceName: T): BackendAPI[T] => {

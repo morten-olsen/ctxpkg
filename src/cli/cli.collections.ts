@@ -13,14 +13,14 @@ import {
   formatTableRow,
   withErrorHandling,
   chalk,
-} from './cli.utils.ts';
-import { createCliClient } from './cli.client.ts';
+} from './cli.utils.js';
+import { createCliClient } from './cli.client.js';
 
-import { Services } from '#root/utils/utils.services.ts';
-import { CollectionsService } from '#root/collections/collections.ts';
-import type { CollectionSpec, Manifest } from '#root/collections/collections.schemas.ts';
-import { config } from '#root/config/config.ts';
-import type { GetBackendAPIResponse } from '#root/backend/backend.types.ts';
+import { Services } from '#root/utils/utils.services.js';
+import { CollectionsService } from '#root/collections/collections.js';
+import type { CollectionSpec, Manifest } from '#root/collections/collections.schemas.js';
+import { config } from '#root/config/config.js';
+import type { GetBackendAPIResponse } from '#root/backend/backend.types.js';
 
 type SyncResult = GetBackendAPIResponse<'collections', 'sync'>;
 

@@ -1,7 +1,7 @@
 import type { Command } from 'commander';
 
-import { createTestRunner, type TestProgressEvent } from '../agent/agent.test-runner.ts';
-import type { ValidationMode } from '../agent/agent.test-runner.schemas.ts';
+import { createTestRunner, type TestProgressEvent } from '../agent/agent.test-runner.js';
+import type { ValidationMode } from '../agent/agent.test-runner.schemas.js';
 
 import {
   chalk,
@@ -11,7 +11,7 @@ import {
   formatSuccess,
   formatWarning,
   withErrorHandling,
-} from './cli.utils.ts';
+} from './cli.utils.js';
 
 type TestOptions = {
   json?: boolean;

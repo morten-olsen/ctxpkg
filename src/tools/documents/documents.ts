@@ -1,8 +1,8 @@
 import * as z from 'zod';
 
-import type { BackendClient } from '#root/client/client.ts';
-import { defineTool, type ToolDefinitions } from '#root/tools/tools.types.ts';
-import { toLangchainTools } from '#root/tools/tools.langchain.ts';
+import type { BackendClient } from '#root/client/client.js';
+import { defineTool, type ToolDefinitions } from '#root/tools/tools.types.js';
+import { toLangchainTools } from '#root/tools/tools.langchain.js';
 
 type DocumentToolOptions = {
   /** Backend client for API calls */

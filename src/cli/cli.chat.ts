@@ -1,14 +1,14 @@
 import { input } from '@inquirer/prompts';
 import type { Command } from 'commander';
 
-import { createDocumentAgent, getLLMConfigFromAppConfig } from '../agent/agent.ts';
-import type { AgentStep } from '../agent/agent.types.ts';
+import { createDocumentAgent, getLLMConfigFromAppConfig } from '../agent/agent.js';
+import type { AgentStep } from '../agent/agent.types.js';
 
-import { createCliClient } from './cli.client.ts';
-import { chalk, formatError, formatHeader, formatInfo, withErrorHandling } from './cli.utils.ts';
+import { createCliClient } from './cli.client.js';
+import { chalk, formatError, formatHeader, formatInfo, withErrorHandling } from './cli.utils.js';
 
-import { CollectionsService } from '#root/collections/collections.ts';
-import { Services } from '#root/utils/utils.services.ts';
+import { CollectionsService } from '#root/collections/collections.js';
+import { Services } from '#root/utils/utils.services.js';
 
 type ChatOptions = {
   interactive?: boolean;
