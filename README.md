@@ -31,14 +31,11 @@ Stack documentation layers — from personal notes to team guidelines to project
 
 ## Installation
 
-```bash
-git clone <repository-url>
-cd ctxpkg
-pnpm install
-npm link
-```
+`npm i -g ctxpkg` or run command with `npx` prefix (`npx ctxpkg col init`)
 
 ## Quick Start
+
+Get your AI agents access to your documentation in minutes:
 
 ```bash
 # Initialize project config
@@ -49,27 +46,77 @@ ctxpkg col add docs ./docs/manifest.json
 
 # Index the documents
 ctxpkg col sync
-
-# Search your documentation
-ctxpkg docs search "how to authenticate"
 ```
 
-**[Full tutorial: Getting Started](docs/getting-started.md)**
+Now configure your AI editor to use the ctxpkg MCP server:
+
+<details>
+<summary>🔧 Cursor</summary>
+
+Add to `~/.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "ctxpkg": {
+      "command": "npx",
+      "args": ["-y", "ctxpkg", "mcp", "documents"]
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary>🤖 Claude Code</summary>
+
+Run this command:
+
+```bash
+claude mcp add ctxpkg -- npx -y ctxpkg mcp documents
+```
+
+</details>
+
+<details>
+<summary>⚡ Opencode</summary>
+
+Add to your Opencode configuration:
+
+```json
+{
+  "mcp": {
+    "ctxpkg": {
+      "type": "local",
+      "command": ["npx", "-y", "ctxpkg", "mcp", "documents"],
+      "enabled": true
+    }
+  }
+}
+```
+
+</details>
+
+**[See more AI editor setups](docs/setup-agents.md)** • **[Full tutorial: Getting Started](docs/getting-started.md)**
 
 ## Documentation
 
-| Guide | Description |
-|-------|-------------|
-| [Getting Started](docs/getting-started.md) | First-time setup tutorial |
-| [CLI Reference](docs/cli-reference.md) | Complete command documentation |
-| [Configuration](docs/configuration.md) | Project config, global config, manifests |
-| [How It Works](docs/how-it-works.md) | Indexing pipeline, search algorithms |
-| [MCP Server](docs/mcp-server.md) | AI editor integration and tools |
-| [AI Chat & Agent Mode](docs/ai-chat.md) | Chat with docs, reduced-token MCP mode |
-| [Agent Testing](docs/agent-testing.md) | Validate agent performance with test suites |
-| [Publishing Packages](docs/github-distribution.md) | Distribute docs via GitHub Releases |
+| Guide                                              | Description                                       |
+| -------------------------------------------------- | ------------------------------------------------- |
+| [AI Editor Setup](docs/setup-agents.md)            | Configure Cursor, Claude Code, Opencode, and more |
+| [Getting Started](docs/getting-started.md)         | First-time setup tutorial                         |
+| [CLI Reference](docs/cli-reference.md)             | Complete command documentation                    |
+| [Configuration](docs/configuration.md)             | Project config, global config, manifests          |
+| [How It Works](docs/how-it-works.md)               | Indexing pipeline, search algorithms              |
+| [MCP Server](docs/mcp-server.md)                   | AI editor integration and tools                   |
+| [AI Chat & Agent Mode](docs/ai-chat.md)            | Chat with docs, reduced-token MCP mode            |
+| [Agent Testing](docs/agent-testing.md)             | Validate agent performance with test suites       |
+| [Publishing Packages](docs/github-distribution.md) | Distribute docs via GitHub Releases               |
 
-## CLI Overview
+## CLI Management Tools
+
+The CLI is primarily for managing your context collections. Most users will interact with ctxpkg through their AI editor via MCP.
 
 ```bash
 # Collections — manage context packages
@@ -79,23 +126,15 @@ ctxpkg col add -g <alias> <url>    # Add global collection
 ctxpkg col sync                    # Index documents
 ctxpkg col list                    # Show collections
 
-# Documents — query indexed content
-ctxpkg docs search "query"         # Search documents
-ctxpkg docs ls                     # List indexed collections
-
-# Chat — AI-powered Q&A
-ctxpkg chat "question"             # One-shot question
-ctxpkg chat -i                     # Interactive session
-
-# Agent — testing and evaluation
-ctxpkg agent test tests.yaml       # Run agent test suite
-
-# MCP — AI editor integration
+# MCP — AI editor integration (main use case)
 ctxpkg mcp docs                    # Start MCP server (tools mode)
 ctxpkg mcp agent                   # Start MCP server (agent mode)
 
-# Daemon — background service
-ctxpkg daemon start                # Start for better performance
+# Additional tools
+ctxpkg docs search "query"         # Direct search (testing)
+ctxpkg chat "question"             # AI-powered Q&A
+ctxpkg agent test tests.yaml       # Test agent performance
+ctxpkg daemon start                # Background service
 ```
 
 See [CLI Reference](docs/cli-reference.md) for complete documentation.
@@ -136,22 +175,35 @@ ctxpkg col add -g my-notes file:///Users/me/notes/manifest.json
 
 ## MCP Integration
 
-Connect ctxpkg to your AI editor:
+ctxpkg's primary purpose is giving AI agents access to your documentation through the **Model Context Protocol (MCP)**. Once configured, your AI assistant gains access to 8 document tools:
+
+- `search` - Semantic search across all your documentation
+- `search_batch` - Multiple queries in one call
+- `get_document` - Retrieve full document content
+- `get_section` - Get specific document sections
+- `get_outline` - Get document structure/outline
+- `find_related` - Find related documents
+- `list_collections` - List all indexed collections
+- `list_documents` - List all documents in collections
+
+### Agent Mode (Recommended for Chat)
+
+For reduced token costs in long conversations, use **Agent Mode**:
 
 ```json
 {
   "mcpServers": {
-    "ctxpkg": {
-      "command": "ctxpkg",
-      "args": ["mcp", "documents"]
+    "ctxpkg-agent": {
+      "command": "npx",
+      "args": ["-y", "ctxpkg", "mcp", "agent"]
     }
   }
 }
 ```
 
-Your AI assistant gains access to 8 document tools: `search`, `search_batch`, `get_document`, `get_section`, `get_outline`, `find_related`, `list_collections`, and `list_documents`.
+This exposes a single `ask_documents` tool that uses an internal AI agent to search and synthesize answers. The calling agent sees only the final result, not intermediate search calls — reducing context overhead.
 
-See [MCP Server Documentation](docs/mcp-server.md) for details.
+See [MCP Server Documentation](docs/mcp-server.md) for complete details.
 
 ## AI Chat & Agent Mode
 
@@ -191,19 +243,24 @@ ctxpkg can package documentation from any source — Confluence, Notion, SharePo
 
 1. **Export your docs as Markdown** — Use your platform's export tools or APIs to extract documentation
 2. **Add a manifest** — Create a `manifest.json` describing the collection:
+
    ```json
    {
      "name": "company-knowledge-base",
      "sources": [{ "pattern": "**/*.md" }]
    }
    ```
+
 3. **Create a bundle** — Package everything into a distributable archive:
+
    ```bash
    ctxpkg col pack --output knowledge-base-v1.tar.gz
    ```
+
 4. **Distribute internally** — Host the bundle on internal file servers, S3, or artifact storage
 
 Teams can then add the bundle:
+
 ```bash
 ctxpkg col add kb https://internal.example.com/bundles/knowledge-base-v1.tar.gz
 ```
