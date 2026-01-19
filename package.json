@@ -7,6 +7,9 @@
     "test:unit": "vitest --run --passWithNoTests",
     "test": "pnpm run \"/^test:/\""
   },
+  "repository": {
+    "url": "https://github.com/morten-olsen/ctxpkg"
+  },
   "bin": {
     "ctxpkg": "./bin/cli.js"
   },
