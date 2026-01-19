@@ -10,7 +10,7 @@
   "bin": {
     "ctxpkg": "./bin/cli.js"
   },
-  "packageManager": "pnpm@10.6.0",
+  "packageManager": "pnpm@10.28.0",
   "files": [
     "src",
     "bin"
@@ -37,7 +37,7 @@
     "typescript-eslint": "8.53.0",
     "vitest": "4.0.17"
   },
-  "name": "@morten-olsen/ctxpkg",
+  "name": "ctxpkg",
   "version": "1.0.0",
   "license": "AGPL-3.0",
   "imports": {
@@ -71,7 +71,11 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "better-sqlite3",
-      "sqlite-vec"
+      "sqlite-vec",
+      "protobufjs",
+      "msw",
+      "esbuild",
+      "sharp"
     ]
   }
 }

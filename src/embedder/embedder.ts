@@ -7,7 +7,9 @@ class EmbedderService {
   #pipeline?: Promise<FeatureExtractionPipeline>;
 
   #setup = async () => {
-    const extractor = await pipeline('feature-extraction', 'mixedbread-ai/mxbai-embed-large-v1');
+    const extractor = await pipeline('feature-extraction', 'mixedbread-ai/mxbai-embed-large-v1', {
+      dtype: 'fp32',
+    });
     return extractor;
   };
 

@@ -2,6 +2,7 @@
 
 import { createProgram } from '../src/cli/cli.ts';
 
-const program = await createProgram();
+const program = createProgram();
 
+// eslint-disable-next-line
 await program.parseAsync(process.argv);
