@@ -506,9 +506,10 @@ class CollectionsService {
       }
 
       const entries: ResolvedFileEntry[] = [];
+      const rootDir = resolve(manifestDir, manifest.baseUrl || '.');
       for (const pattern of sources.glob) {
-        for await (const file of glob(pattern, { cwd: manifestDir })) {
-          const fullPath = resolve(manifestDir, file);
+        for await (const file of glob(pattern, { cwd: rootDir })) {
+          const fullPath = resolve(rootDir, file);
           entries.push({
             id: file,
             url: `file://${fullPath}`,
@@ -1032,12 +1033,6 @@ class CollectionsService {
 
     // Check manifest hash to skip if unchanged
     const manifestHash = createHash('sha256').update(manifestContent).digest('hex');
-    const existingCollection = await this.getCollection(collectionId);
-
-    if (!force && existingCollection?.manifest_hash === manifestHash) {
-      onProgress?.('Manifest unchanged, skipping sync');
-      return { added: 0, updated: 0, removed: 0, total: 0 };
-    }
 
     onProgress?.('Resolving sources...');
 
